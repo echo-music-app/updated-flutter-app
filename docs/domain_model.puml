@@ -1,0 +1,97 @@
+@startuml
+
+enum Privacy {
+    Public,
+    Friends,
+    OnlyMe
+}
+note left: Public is for Artists only
+
+enum UserStatus {
+    pending
+    active
+    disabled
+}
+
+entity AdminUser {
+}
+note right: Independent of app users
+
+entity User {
+    UUID id
+    string email
+    string username
+    string password
+    string bio
+    Genre[] preferredGenres
+    UserStatus status
+}
+
+note left
+    Signup: email (unique), username (unique), password
+    bio: limit 200, utf8mb4
+    sensitive data: email, username, bio, preferredGenres
+end note
+
+' Private attachments must be supported (expiring links / pre-signed links)
+entity Attachment {
+}
+
+entity Post {
+    Privacy privacy
+    Attachment[] attachments
+}
+
+' Initially 2 participants only
+entity MessageThread {
+    User[] participants
+}
+
+' Can only write to and receive messages from friends
+entity Message {
+    Thread thread
+    Attachments[] attachments
+}
+
+' Declined is not really required for now, but can be useful for audit purposes
+enum FriendStatus {
+    accepted
+    declined
+    pending
+}
+
+entity Friend {
+    User user1
+    User user2
+    status
+}
+
+
+User <|-- Artist
+
+User ..> UserStatus : has
+User ||--o{ Post : creates
+Post ..> Privacy : has
+
+User }o--o{ MessageThread : participates in
+
+MessageThread ||--|{ Message : contains
+User ||--o{ Message : sends
+
+User ||--o{ Friend : has
+
+Friend ..> FriendStatus : has
+
+Post ||--o{ Attachment : has
+
+Attachment <|-- Text
+
+Attachment <|-- ArtistPost
+
+' Embedding of external players need to be checked
+Attachment <|-- SpotifyLink
+Attachment <|-- SoundcloudLink
+Attachment <|-- AudioFile
+Attachment <|-- VideoFile
+
+@enduml

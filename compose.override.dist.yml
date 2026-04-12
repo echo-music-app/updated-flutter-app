@@ -1,0 +1,23 @@
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  backend-dev:
+    ports:
+      - "8000:8000"
+
+  backend-admin:
+    ports:
+      - "8001:8000"
+
+  storage:
+    ports:
+      - "3900:3900"
+      - "3902:3902"
+      - "3903:3903"
+      - "3904:3904"
+
+  garage-webui:
+    ports:
+      - "3909:3909"

@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  changes:
+    name: Detect changed apps
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      admin: ${{ steps.changes.outputs.admin }}
+      mobile: ${{ steps.changes.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          base: main
+          filters: |
+            backend:
+              - 'backend/**'
+            admin:
+              - 'admin/**'
+            mobile:
+              - 'mobile/**'
+
+  backend-ci:
+    name: Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run backend CI action
+        uses: ./.github/actions/backend-ci
+
+  admin-ci:
+    name: Admin UI
+    needs: changes
+    if: needs.changes.outputs.admin == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run admin CI action
+        uses: ./.github/actions/admin-ci
+
+  mobile-ci:
+    name: Mobile
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run mobile CI action
+        uses: ./.github/actions/mobile-ci
+        # TODO: Fix this awkwardness, separate mobile CI actions
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: mobile/build/web/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk

@@ -1,0 +1,30 @@
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+metadata_auto_snapshot_interval = "6h"
+
+replication_factor = 1
+
+compression_level = 2
+
+rpc_bind_addr = "[::]:3901"
+#rpc_public_addr = "storage:3901"
+rpc_secret = "6f09a4f6ac896a0526200d1e3e6cae3793f724ce0c5cfe7cdaa0c5be8f2da238"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.localhost"
+
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".cdn.localhost"
+index = "index.html"
+
+[admin]
+api_bind_addr = "[::]:3903"
+admin_token = "iS+o5elOLlDoJJynXQv3FvYx6eogkAw3oedXqR9lOjw="
+metrics_token = "TdvQ3VneyP/p2t2t5hjS0pNIKLsvuDw0LFsKzvkrHhU="
+
+[k2v_api]
+api_bind_addr = "[::]:3904"

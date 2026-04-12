@@ -1,0 +1,32 @@
+# Dependencies and build artifacts
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+coverage/
+*.isorte
+
+# VCS and local tooling
+.git/
+.vscode/
+.idea/
+
+# Docker files
+Dockerfile*
+.dockerignore
+
+# Environment and logs
+.env*
+*.log*
+
+# OS temp files
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

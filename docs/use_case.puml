@@ -1,0 +1,10 @@
+@startuml
+
+:User: as user
+:Artist: as artist
+:Admin: as admin
+
+user --> (Login)
+artist --> (Login)
+
+@enduml

@@ -1,0 +1,31 @@
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+backend/.env
+compose.override.yml
+
+# Flutter
+mobile/.dart_tool/
+mobile/build/
+mobile/*.g.dart
+mobile/*.freezed.dart
+mobile/android/app/build/reports/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+*.isorted
+
+# Logs and env
+*.log
+.env*

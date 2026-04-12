@@ -1,0 +1,79 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Echo backend API"
+readme = "README.md"
+authors = [
+    { name = "Zsolt Petrik", email = "pezia@pezia.hu" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.18.4",
+    "asyncpg>=0.31.0",
+    "bcrypt>=5.0.0",
+    "fastapi[standard]>=0.134.0",
+    "pydantic-settings>=2.13.1",
+    "python-multipart>=0.0.22",
+    "sqlalchemy[asyncio]>=2.0.47",
+    "uuid6>=2025.0.1",
+    "httpx>=0.28.1",
+    "cryptography>=44.0.0",
+    "google-auth>=2.39.0",
+    "requests>=2.32.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.0,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "anyio>=4.12.1",
+    "black>=26.1.0",
+    "isort>=8.0.1",
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.4",
+    "sqlalchemy[mypy]>=2.0.47",
+]
+
+[tool.uv]
+default-groups = "all"
+
+[tool.black]
+line-length = 140
+
+[tool.ruff]
+line-length = 140
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.isort]
+profile = "black"
+line_length = 140
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["backend"]
+concurrency = ["greenlet", "thread"]
+
+[tool.coverage.paths]
+source = [
+    "src/backend",
+    ".venv/**/backend",
+]
+
+[tool.coverage.report]
+fail_under = 100
+omit = [
+    "src/backend/infrastructure/persistence/models/attachment.py",
+    "src/backend/infrastructure/persistence/models/friend.py",
+    "src/backend/infrastructure/persistence/models/message.py",
+    "src/backend/infrastructure/persistence/models/post.py",
+]

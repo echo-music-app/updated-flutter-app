@@ -1,0 +1,38 @@
+name: Admin CI
+description: Run admin UI CI tasks
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: "24"
+
+    - name: Enable corepack
+      run: corepack enable
+      shell: bash
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash
+      working-directory: admin
+
+    - name: Lint (Biome)
+      run: pnpm biome check .
+      shell: bash
+      working-directory: admin
+
+    - name: Type check
+      run: pnpm typecheck
+      shell: bash
+      working-directory: admin
+
+    - name: Unit and component tests
+      run: pnpm test
+      shell: bash
+      working-directory: admin
+
+    - name: Build
+      run: pnpm build
+      shell: bash
+      working-directory: admin

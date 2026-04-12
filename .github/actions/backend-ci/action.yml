@@ -1,0 +1,29 @@
+name: Backend CI
+description: Run backend CI tasks
+runs:
+  using: composite
+  steps:
+    - name: Start
+      run: make up
+      shell: bash
+
+    - name: Migrate
+      run: make migrate
+      shell: bash
+
+    - name: Lint (ruff)
+      run: make lint
+      shell: bash
+
+    - name: Format and import order check
+      run: make check
+      shell: bash
+
+    - name: Run tests
+      run: make test
+      shell: bash
+
+    - name: Stop
+      if: ${{ always() }}
+      run: make down
+      shell: bash

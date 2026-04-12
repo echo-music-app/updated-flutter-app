@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:18
+    environment:
+      POSTGRES_USER: echo
+      POSTGRES_PASSWORD: echo
+      POSTGRES_DB: echo
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U echo -d echo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    user: "${CURRENT_USER:-0:0}"
+    command:
+      - "uvicorn"
+      - "backend.main:app"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--reload"
+    volumes:
+      - ./backend:/app:rw
+    environment:
+      DATABASE_URL: postgresql+asyncpg://echo:echo@postgres:5432/echo
+      SECRET_KEY: ci-secret-key-not-used-in-tests
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend-admin:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    user: "${CURRENT_USER:-0:0}"
+    command:
+      - "uvicorn"
+      - "backend.admin:admin_app"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+    volumes:
+      - ./backend:/app:rw
+    environment:
+      DATABASE_URL: postgresql+asyncpg://echo:echo@postgres:5432/echo
+      SECRET_KEY: ci-secret-key-not-used-in-tests
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  wiremock:
+    image: wiremock/wiremock:3x-alpine
+
+  storage:
+    image: dxflrs/garage:v2.2.0
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+
+  garage-webui:
+    image: khairul169/garage-webui:latest
+    container_name: garage-webui
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+    environment:
+      API_BASE_URL: "http://storage:3903"
+      S3_ENDPOINT_URL: "http://storage:3900"
+
+volumes:
+  postgres_data:
+  garage_data:
+  garage_meta:

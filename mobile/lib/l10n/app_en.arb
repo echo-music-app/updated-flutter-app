@@ -1,0 +1,264 @@
+{
+  "@@locale": "en",
+  "appTitle": "Echo",
+  "@appTitle": {
+    "description": "The name of the application"
+  },
+  "homeTitle": "Home",
+  "@homeTitle": {
+    "description": "Title of the home screen"
+  },
+  "loadingMessage": "Loading...",
+  "@loadingMessage": {
+    "description": "Message shown while content is loading"
+  },
+  "emptyMessage": "Nothing here yet",
+  "@emptyMessage": {
+    "description": "Message shown when there is no content"
+  },
+  "errorMessage": "Something went wrong",
+  "@errorMessage": {
+    "description": "Message shown when an error occurs"
+  },
+  "retryButton": "Retry",
+  "@retryButton": {
+    "description": "Label for the retry button"
+  },
+  "playerTitle": "Now Playing",
+  "@playerTitle": {
+    "description": "Title of the player screen"
+  },
+  "connectWithSpotify": "Connect with Spotify",
+  "@connectWithSpotify": {
+    "description": "Label for the Spotify login button"
+  },
+  "loadingTracks": "Loading tracks…",
+  "@loadingTracks": {
+    "description": "Message shown while loading track metadata"
+  },
+  "errorLoadingTracks": "Could not load tracks",
+  "@errorLoadingTracks": {
+    "description": "Error message when track loading fails"
+  },
+  "premiumRequired": "Spotify Premium is required for playback",
+  "@premiumRequired": {
+    "description": "Message shown when user lacks Spotify Premium"
+  },
+  "previousTrack": "Previous track",
+  "@previousTrack": {
+    "description": "Semantic label for the previous track button"
+  },
+  "nextTrack": "Next track",
+  "@nextTrack": {
+    "description": "Semantic label for the next track button"
+  },
+  "playButton": "Play",
+  "@playButton": {
+    "description": "Semantic label for the play button"
+  },
+  "pauseButton": "Pause",
+  "@pauseButton": {
+    "description": "Semantic label for the pause button"
+  },
+  "unknownTrack": "Unknown track",
+  "@unknownTrack": {
+    "description": "Fallback text when track name is unavailable"
+  },
+  "unknownArtist": "Unknown artist",
+  "@unknownArtist": {
+    "description": "Fallback text when artist name is unavailable"
+  },
+  "openPlayer": "Open Player",
+  "@openPlayer": {
+    "description": "Button to open the native SDK player screen"
+  },
+  "openWebViewPlayer": "Open WebView Player",
+  "@openWebViewPlayer": {
+    "description": "Button to open the WebView iframe player screen"
+  },
+  "webViewLimitationNotice": "Audio playback is not available in the WebView player. This is a known platform limitation (DRM not supported in Android WebView / iOS WKWebView). Visual controls are shown for demonstration purposes.",
+  "@webViewLimitationNotice": {
+    "description": "Persistent banner explaining WebView audio limitation"
+  },
+  "webViewPlayerLoadError": "Failed to load the Spotify player. Please check your connection and try again.",
+  "@webViewPlayerLoadError": {
+    "description": "Error message when the WebView iframe fails to load"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout button label"
+  },
+  "login": "Login",
+  "@login": {
+    "description": "Login button label"
+  },
+  "register": "Register", 
+  "@register": {
+    "description": "Register button label"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email field label"
+  },
+  "username": "Username",
+  "@username": {
+    "description": "Username field label"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+  "loginOrCreateAccount": "Login or Create Account",
+  "@loginOrCreateAccount": {
+    "description": "Title for login screen"
+  },
+  "alreadyHaveAccount": "Already have an account?",
+  "@alreadyHaveAccount": {
+    "description": "Prompt for users who already have an account"
+  },
+  "dontHaveAccount": "Don't have an account?",
+  "@dontHaveAccount": {
+    "description": "Prompt for users who don't have an account"
+  },
+  "invalidCredentials": "Invalid email or password",
+  "@invalidCredentials": {
+    "description": "Error message for invalid login credentials"
+  },
+  "registrationFailed": "Registration failed",
+  "@registrationFailed": {
+    "description": "Error message for failed registration"
+  },
+  "profileTitle": "Profile",
+  "@profileTitle": {
+    "description": "Generic title for the profile screen"
+  },
+  "myProfileTitle": "My Profile",
+  "@myProfileTitle": {
+    "description": "Title for own profile screen"
+  },
+  "userProfileTitle": "{username}'s Profile",
+  "@userProfileTitle": {
+    "description": "Title for another user's profile screen",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "profileBioSectionTitle": "Bio",
+  "@profileBioSectionTitle": {
+    "description": "Section title for profile bio"
+  },
+  "profileGenresSectionTitle": "Music Genres",
+  "@profileGenresSectionTitle": {
+    "description": "Section title for profile music genres"
+  },
+  "profilePostsSectionTitle": "Posts",
+  "@profilePostsSectionTitle": {
+    "description": "Section title for profile posts"
+  },
+  "profileImagePlaceholderLabel": "Profile picture",
+  "@profileImagePlaceholderLabel": {
+    "description": "Semantic label for the profile image placeholder"
+  },
+  "profileNotFoundMessage": "This profile could not be found.",
+  "@profileNotFoundMessage": {
+    "description": "Message shown when a profile does not exist"
+  },
+  "profileLoadErrorMessage": "Could not load profile. Please try again.",
+  "@profileLoadErrorMessage": {
+    "description": "Message shown when profile loading fails"
+  },
+  "profilePostsLoadErrorMessage": "Could not load posts. Please try again.",
+  "@profilePostsLoadErrorMessage": {
+    "description": "Message shown when profile posts loading fails"
+  },
+  "profileEmptyBioMessage": "No bio yet.",
+  "@profileEmptyBioMessage": {
+    "description": "Message shown when a profile has no bio"
+  },
+  "profileEmptyGenresMessage": "No genres listed.",
+  "@profileEmptyGenresMessage": {
+    "description": "Message shown when a profile has no genres"
+  },
+  "profileEmptyPostsMessage": "No posts yet.",
+  "@profileEmptyPostsMessage": {
+    "description": "Message shown when a profile has no posts"
+  },
+  "loadMorePostsButton": "Load more posts",
+  "@loadMorePostsButton": {
+    "description": "Label for the load more posts button"
+  },
+  "searchTitle": "Search",
+  "@searchTitle": {
+    "description": "Title of the search screen"
+  },
+  "searchInputHint": "Search for music...",
+  "@searchInputHint": {
+    "description": "Hint text for the search input field"
+  },
+  "searchSubmitLabel": "Search",
+  "@searchSubmitLabel": {
+    "description": "Semantic label for the search submit action"
+  },
+  "searchIdlePrompt": "Enter a query to search for music",
+  "@searchIdlePrompt": {
+    "description": "Prompt shown in idle state before first search"
+  },
+  "searchLoadingMessage": "Searching...",
+  "@searchLoadingMessage": {
+    "description": "Message shown while search is in progress"
+  },
+  "searchErrorMessage": "Search failed. Please try again.",
+  "@searchErrorMessage": {
+    "description": "Message shown when search encounters a general error"
+  },
+  "searchValidationErrorMessage": "Invalid search query.",
+  "@searchValidationErrorMessage": {
+    "description": "Message shown when the search query is invalid"
+  },
+  "searchServiceUnavailableMessage": "Music search is temporarily unavailable. Please try again.",
+  "@searchServiceUnavailableMessage": {
+    "description": "Message shown when the search service is unavailable"
+  },
+  "searchAuthRequiredMessage": "Your session has expired. Please log in again.",
+  "@searchAuthRequiredMessage": {
+    "description": "Message shown when the session is expired during search"
+  },
+  "searchRetryLabel": "Retry",
+  "@searchRetryLabel": {
+    "description": "Label for the search retry button"
+  },
+  "searchSegmentTracks": "Tracks",
+  "@searchSegmentTracks": {
+    "description": "Label for the Tracks segment"
+  },
+  "searchSegmentAlbums": "Albums",
+  "@searchSegmentAlbums": {
+    "description": "Label for the Albums segment"
+  },
+  "searchSegmentArtists": "Artists",
+  "@searchSegmentArtists": {
+    "description": "Label for the Artists segment"
+  },
+  "searchTracksEmptyMessage": "No tracks found",
+  "@searchTracksEmptyMessage": {
+    "description": "Empty state message for the Tracks segment"
+  },
+  "searchAlbumsEmptyMessage": "No albums found",
+  "@searchAlbumsEmptyMessage": {
+    "description": "Empty state message for the Albums segment"
+  },
+  "searchArtistsEmptyMessage": "No artists found",
+  "@searchArtistsEmptyMessage": {
+    "description": "Empty state message for the Artists segment"
+  },
+  "searchOpenLabel": "Search Music",
+  "@searchOpenLabel": {
+    "description": "Label for the button on the home screen that opens search"
+  },
+  "searchSegmentControlLabel": "Filter results by type",
+  "@searchSegmentControlLabel": {
+    "description": "Semantic label for the segmented result type control"
+  }
+}
