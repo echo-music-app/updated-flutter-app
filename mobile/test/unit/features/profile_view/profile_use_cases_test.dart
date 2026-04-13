@@ -51,6 +51,16 @@ class _FakeProfileRepository implements ProfileRepository {
     if (userPostsError != null) throw userPostsError!;
     return userPostsResult!;
   }
+
+  @override
+  Future<ProfileHeader> updateOwnProfile({String? bio}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProfileHeader> uploadOwnAvatar(String filePath) {
+    throw UnimplementedError();
+  }
 }
 
 ProfileHeader _header(String id) =>
@@ -247,4 +257,14 @@ class _CapturingRepository implements ProfileRepository {
     int pageSize = 20,
     String? cursor,
   }) => throw UnimplementedError();
+
+  @override
+  Future<ProfileHeader> updateOwnProfile({String? bio}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProfileHeader> uploadOwnAvatar(String filePath) {
+    throw UnimplementedError();
+  }
 }

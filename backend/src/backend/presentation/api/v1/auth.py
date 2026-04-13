@@ -1,6 +1,6 @@
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +20,11 @@ from backend.domain.auth.exceptions import (
     GoogleAuthNotConfiguredError,
     InvalidCredentialsError,
     InvalidGoogleTokenError,
+    InvalidMfaCodeError,
     InvalidTokenError,
     InvalidVerificationCodeError,
+    MfaNotConfiguredError,
+    MfaRequiredError,
     UsernameTakenError,
 )
 from backend.infrastructure.email.smtp_sender import send_verification_email
@@ -131,6 +134,23 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class MfaSetupResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+
+
+class MfaCodeRequest(BaseModel):
+    code: str
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, v: str) -> str:
+        code = v.strip()
+        if not re.match(r"^\d{6}$", code):
+            raise ValueError("MFA code must be 6 digits")
+        return code
+
+
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
@@ -181,15 +201,25 @@ async def register(body: RegisterRequest, use_cases: AuthUseCases = Depends(get_
 
 @router.post("/login", response_model=TokenResponse)
 @public_endpoint
-async def login(form: OAuth2PasswordRequestForm = Depends(), use_cases: AuthUseCases = Depends(get_auth_use_cases)):
+async def login(
+    form: OAuth2PasswordRequestForm = Depends(),
+    mfa_code: str | None = Header(default=None, alias="X-MFA-Code"),
+    use_cases: AuthUseCases = Depends(get_auth_use_cases),
+):
     try:
-        token_pair = await use_cases.login(form.username, form.password)
+        token_pair = await use_cases.login(form.username, form.password, mfa_code=mfa_code)
     except InvalidCredentialsError:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     except EmailNotVerifiedError:
         raise HTTPException(status_code=403, detail="Email not verified")
     except AccountDisabledError:
         raise HTTPException(status_code=403, detail="Account is disabled")
+    except MfaRequiredError:
+        raise HTTPException(status_code=401, detail="MFA code required")
+    except InvalidMfaCodeError:
+        raise HTTPException(status_code=401, detail="Invalid MFA code")
+    except MfaNotConfiguredError:
+        raise HTTPException(status_code=400, detail="MFA is not configured")
 
     return TokenResponse(
         access_token=token_pair.access_token,
@@ -198,16 +228,48 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), use_cases: AuthUseC
     )
 
 
+@router.post("/mfa/setup", response_model=MfaSetupResponse)
+async def setup_mfa(
+    current_user: User = Depends(get_current_user),
+    use_cases: AuthUseCases = Depends(get_auth_use_cases),
+):
+    secret, otpauth_uri = await use_cases.setup_mfa(current_user.id)
+    return MfaSetupResponse(secret=secret, otpauth_uri=otpauth_uri)
+
+
+@router.post("/mfa/enable", status_code=204, response_class=Response)
+async def enable_mfa(
+    body: MfaCodeRequest,
+    current_user: User = Depends(get_current_user),
+    use_cases: AuthUseCases = Depends(get_auth_use_cases),
+):
+    try:
+        await use_cases.enable_mfa(current_user.id, body.code)
+    except MfaNotConfiguredError:
+        raise HTTPException(status_code=400, detail="MFA setup was not started")
+    except InvalidMfaCodeError:
+        raise HTTPException(status_code=400, detail="Invalid MFA code")
+    return Response(status_code=204)
+
+
+@router.post("/mfa/disable", status_code=204, response_class=Response)
+async def disable_mfa(
+    body: MfaCodeRequest,
+    current_user: User = Depends(get_current_user),
+    use_cases: AuthUseCases = Depends(get_auth_use_cases),
+):
+    try:
+        await use_cases.disable_mfa(current_user.id, body.code)
+    except MfaNotConfiguredError:
+        raise HTTPException(status_code=400, detail="MFA is not enabled")
+    except InvalidMfaCodeError:
+        raise HTTPException(status_code=400, detail="Invalid MFA code")
+    return Response(status_code=204)
+
+
 @router.post("/verify-email", response_model=TokenResponse)
 @public_endpoint
 async def verify_email(body: VerifyEmailRequest, use_cases: AuthUseCases = Depends(get_auth_use_cases)):
-    return await _verify_email_and_issue_tokens(body, use_cases)
-
-
-@router.post("/verify", response_model=TokenResponse)
-@public_endpoint
-async def verify(body: VerifyEmailRequest, use_cases: AuthUseCases = Depends(get_auth_use_cases)):
-    """Alias for email verification used by some clients."""
     return await _verify_email_and_issue_tokens(body, use_cases)
 
 

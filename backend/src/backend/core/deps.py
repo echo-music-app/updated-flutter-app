@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,19 +11,22 @@ from backend.infrastructure.persistence.models.auth import AccessToken
 from backend.infrastructure.persistence.models.user import User, UserStatus
 
 
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
 async def get_current_user(
     request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db_session),
 ) -> User | None:
     endpoint = request.scope.get("endpoint")
     if endpoint and getattr(endpoint, "__public__", False):
         return None
 
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+    if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
 
-    raw_token = auth_header[7:]
+    raw_token = credentials.credentials
     token_hash = hash_token(raw_token)
 
     result = await db.execute(

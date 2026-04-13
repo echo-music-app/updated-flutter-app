@@ -16,6 +16,7 @@ class PendingVerification {
 
 abstract class AuthRepository extends ChangeNotifier {
   bool get isAuthenticated;
+  bool get lastLogoutWasLocalOnly;
   Future<String?> getAccessToken();
   Future<String?> refreshAccessToken();
   Future<void> logout();
@@ -23,7 +24,7 @@ abstract class AuthRepository extends ChangeNotifier {
   bool get supportsTfa;
 
   // Email authentication methods
-  Future<void> loginWithEmail(String email, String password);
+  Future<void> loginWithEmail(String email, String password, {String? mfaCode});
   Future<PendingVerification> register(
     String email,
     String username,

@@ -28,6 +28,9 @@ class _FakeAuthRepository extends AuthRepository {
   bool get isAuthenticated => false;
 
   @override
+  bool get lastLogoutWasLocalOnly => false;
+
+  @override
   bool get supportsTfa => false;
 
   @override
@@ -43,7 +46,11 @@ class _FakeAuthRepository extends AuthRepository {
   Future<void> clearSession() async {}
 
   @override
-  Future<void> loginWithEmail(String email, String password) {
+  Future<void> loginWithEmail(
+    String email,
+    String password, {
+    String? mfaCode,
+  }) {
     throw UnimplementedError();
   }
 

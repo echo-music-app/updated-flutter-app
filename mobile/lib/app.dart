@@ -4,6 +4,7 @@ import 'package:mobile/routing/app_router.dart';
 import 'package:mobile/domain/repositories/auth_repository.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/ui/core/themes/app_theme.dart';
+import 'package:mobile/ui/core/themes/theme_mode_controller.dart';
 import 'package:provider/provider.dart';
 
 class EchoApp extends StatelessWidget {
@@ -12,6 +13,7 @@ class EchoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authRepository = context.read<AuthRepository>();
+    final themeMode = context.watch<ThemeModeController>().themeMode;
     return MaterialApp.router(
       title: 'Echo',
       localizationsDelegates: const [
@@ -23,6 +25,7 @@ class EchoApp extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       routerConfig: appRouter(authRepository),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/domain/models/auth_tokens.dart';
@@ -9,12 +10,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
   EmailAuthRepository({
     required String echoBaseUrl,
-    List<String>? googleClientIds,
+    String? googleClientId,
+    String? googleServerClientId,
     FlutterSecureStorage? secureStorage,
     Dio? dio,
   }) : _echoBaseUrl = echoBaseUrl,
        _googleSignIn = GoogleSignIn.instance,
-       _googleClientIds = googleClientIds ?? const <String>[],
+       _googleClientId = googleClientId ?? '',
+       _googleServerClientId = googleServerClientId ?? '',
        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _dio = dio ?? Dio() {
     _init();
@@ -22,17 +25,22 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
 
   final String _echoBaseUrl;
   final GoogleSignIn _googleSignIn;
-  final List<String> _googleClientIds;
+  final String _googleClientId;
+  final String _googleServerClientId;
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
 
   bool _isAuthenticated = false;
+  bool _lastLogoutWasLocalOnly = false;
 
   @override
   bool get isAuthenticated => _isAuthenticated;
 
   @override
-  bool get supportsTfa => false;
+  bool get lastLogoutWasLocalOnly => _lastLogoutWasLocalOnly;
+
+  @override
+  bool get supportsTfa => true;
 
   Future<void> _init() async {
     final hasActiveSession = await hasSession();
@@ -75,7 +83,11 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
 
   /// Login with email and password using the backend endpoint.
   @override
-  Future<void> loginWithEmail(String email, String password) async {
+  Future<void> loginWithEmail(
+    String email,
+    String password, {
+    String? mfaCode,
+  }) async {
     try {
       final response = await _dio.post(
         '$_echoBaseUrl/v1/auth/login',
@@ -85,7 +97,11 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
           'grant_type': 'password',
         }),
         options: Options(
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            if (mfaCode != null && mfaCode.trim().isNotEmpty)
+              'X-MFA-Code': mfaCode.trim(),
+          },
         ),
       );
 
@@ -191,10 +207,20 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
   @override
   Future<void> loginWithGoogle() async {
     try {
-      if (_googleClientIds.isNotEmpty) {
+      final isAndroid =
+          !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      if (isAndroid && _googleServerClientId.isEmpty) {
+        throw Exception(
+          'Google sign-in is not configured. Provide --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.',
+        );
+      }
+
+      if (_googleClientId.isNotEmpty || _googleServerClientId.isNotEmpty) {
         await _googleSignIn.initialize(
-          clientId: _googleClientIds.first,
-          serverClientId: _googleClientIds.first,
+          clientId: _googleClientId.isEmpty ? null : _googleClientId,
+          serverClientId: _googleServerClientId.isEmpty
+              ? null
+              : _googleServerClientId,
         );
       } else {
         await _googleSignIn.initialize();
@@ -233,7 +259,9 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
 
   @override
   Future<String?> refreshAccessToken() async {
-    final refreshToken = await _secureStorage.read(key: AuthTokens.refreshTokenKey);
+    final refreshToken = await _secureStorage.read(
+      key: AuthTokens.refreshTokenKey,
+    );
     if (refreshToken == null || refreshToken.isEmpty) {
       await clearSession();
       return null;
@@ -257,7 +285,8 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
         await clearSession();
         return null;
       }
-      final errorMessage = e.response?.data?['detail'] ?? 'Token refresh failed';
+      final errorMessage =
+          e.response?.data?['detail'] ?? 'Token refresh failed';
       throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Token refresh failed: $e');
@@ -266,7 +295,10 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    final accessToken = await _secureStorage.read(key: AuthTokens.accessTokenKey);
+    _lastLogoutWasLocalOnly = false;
+    final accessToken = await _secureStorage.read(
+      key: AuthTokens.accessTokenKey,
+    );
     if (accessToken != null && accessToken.isNotEmpty) {
       try {
         await _dio.post(
@@ -274,10 +306,10 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
           options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
         );
       } on DioException catch (e) {
-        if (e.response?.statusCode != 401) {
-          final errorMessage = e.response?.data?['detail'] ?? 'Logout failed';
-          throw Exception(errorMessage);
-        }
+        // Do not block local sign-out on server/network logout failures.
+        // Tokens are still cleared locally below.
+        _lastLogoutWasLocalOnly = true;
+        debugPrint('Logout API failed: ${e.response?.statusCode} ${e.message}');
       }
     }
     await clearSession();

@@ -41,3 +41,24 @@ curl -X POST http://127.0.0.1:8001/v1/auth/resend-verification \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"alice@example.com\"}"
 ```
+
+## Google Authentication
+1. Add your Google Web client ID to `backend/.env`:
+   - `GOOGLE_CLIENT_IDS=your-web-client-id.apps.googleusercontent.com`
+2. Mobile sends Google `id_token` to:
+   - `POST /v1/auth/google`
+3. Backend verifies:
+   - token signature/issuer
+   - audience against `GOOGLE_CLIENT_IDS`
+
+## Two-Factor Authentication (TOTP)
+1. Run latest migration:
+   - `uv run alembic upgrade head`
+2. Login to get bearer token.
+3. Start MFA setup:
+   - `POST /v1/auth/mfa/setup` with `Authorization: Bearer <access_token>`
+4. Scan `otpauth_uri` in authenticator app (Google Authenticator/Authy/1Password).
+5. Enable MFA:
+   - `POST /v1/auth/mfa/enable` body: `{"code":"123456"}`
+6. Next logins require header:
+   - `X-MFA-Code: 123456`

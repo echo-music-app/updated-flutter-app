@@ -53,10 +53,69 @@ class EchoProfileRepository implements ProfileRepository {
     }
   }
 
+  Future<Response<dynamic>> _patchWithAuthRetry(
+    String path, {
+    Object? data,
+  }) async {
+    try {
+      return await _dio.patch(
+        path,
+        data: data,
+        options: await _authOptions(),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 401 || _refreshAccessToken == null) {
+        rethrow;
+      }
+      final refreshedToken = await _refreshAccessToken();
+      if (refreshedToken == null || refreshedToken.isEmpty) {
+        rethrow;
+      }
+      return _dio.patch(
+        path,
+        data: data,
+        options: Options(headers: {'Authorization': 'Bearer $refreshedToken'}),
+      );
+    }
+  }
+
+  Future<Response<dynamic>> _postWithAuthRetry(
+    String path, {
+    Object? data,
+  }) async {
+    try {
+      return await _dio.post(
+        path,
+        data: data,
+        options: await _authOptions(),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 401 || _refreshAccessToken == null) {
+        rethrow;
+      }
+      final refreshedToken = await _refreshAccessToken();
+      if (refreshedToken == null || refreshedToken.isEmpty) {
+        rethrow;
+      }
+      return _dio.post(
+        path,
+        data: data,
+        options: Options(headers: {'Authorization': 'Bearer $refreshedToken'}),
+      );
+    }
+  }
+
   ProfileHeader _mapProfile(Map<String, dynamic> json) {
+    final rawAvatarUrl = json['avatar_url'] as String?;
+    final avatarUrl = rawAvatarUrl == null || rawAvatarUrl.isEmpty
+        ? null
+        : rawAvatarUrl.startsWith('http')
+        ? rawAvatarUrl
+        : '$_echoBaseUrl$rawAvatarUrl';
     return ProfileHeader(
       id: json['id'] as String,
       username: json['username'] as String,
+      avatarUrl: avatarUrl,
       bio: json['bio'] as String?,
       preferredGenres:
           (json['preferred_genres'] as List<dynamic>?)?.cast<String>() ?? [],
@@ -105,9 +164,7 @@ class EchoProfileRepository implements ProfileRepository {
   @override
   Future<ProfileHeader> getOwnProfile() async {
     try {
-      final response = await _getWithAuthRetry(
-        '$_echoBaseUrl/v1/me',
-      );
+      final response = await _getWithAuthRetry('$_echoBaseUrl/v1/me');
       return _mapProfile(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       _translateError(e);
@@ -117,9 +174,7 @@ class EchoProfileRepository implements ProfileRepository {
   @override
   Future<ProfileHeader> getUserProfile(String userId) async {
     try {
-      final response = await _getWithAuthRetry(
-        '$_echoBaseUrl/v1/users/$userId',
-      );
+      final response = await _getWithAuthRetry('$_echoBaseUrl/v1/users/$userId');
       return _mapProfile(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       _translateError(e);
@@ -158,6 +213,35 @@ class EchoProfileRepository implements ProfileRepository {
         queryParameters: queryParams,
       );
       return _mapPostsPage(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
+  Future<ProfileHeader> updateOwnProfile({String? bio}) async {
+    try {
+      final response = await _patchWithAuthRetry(
+        '$_echoBaseUrl/v1/me',
+        data: bio == null ? const <String, dynamic>{} : {'bio': bio},
+      );
+      return _mapProfile(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
+  Future<ProfileHeader> uploadOwnAvatar(String filePath) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+      });
+      final response = await _postWithAuthRetry(
+        '$_echoBaseUrl/v1/me/avatar',
+        data: formData,
+      );
+      return _mapProfile(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       _translateError(e);
     }

@@ -14,6 +14,8 @@ class IUser(Protocol):
     email_verification_code_hash: bytes | None
     email_verification_expires_at: datetime | None
     email_verification_sent_at: datetime | None
+    mfa_enabled: bool
+    mfa_totp_secret: str | None
 
 
 class IAccessToken(Protocol):
@@ -63,6 +65,12 @@ class IUserRepository(Protocol):
         google_subject: str,
         verified_at: datetime,
     ) -> IUser | None: ...
+
+    async def set_mfa_secret(self, user_id: uuid.UUID, *, secret: str) -> IUser | None: ...
+
+    async def enable_mfa(self, user_id: uuid.UUID) -> IUser | None: ...
+
+    async def disable_mfa(self, user_id: uuid.UUID) -> IUser | None: ...
 
 
 class ITokenRepository(Protocol):

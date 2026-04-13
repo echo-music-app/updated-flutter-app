@@ -19,6 +19,7 @@ class ProfileHeader {
     required this.id,
     required this.username,
     required this.createdAt,
+    this.avatarUrl,
     this.bio,
     this.preferredGenres = const [],
     this.isArtist = false,
@@ -27,6 +28,7 @@ class ProfileHeader {
 
   final String id;
   final String username;
+  final String? avatarUrl;
   final String? bio;
   final List<String> preferredGenres;
   final bool isArtist;

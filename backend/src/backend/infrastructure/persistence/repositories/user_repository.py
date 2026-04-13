@@ -90,3 +90,28 @@ class SqlAlchemyUserRepository:
         user.email_verification_sent_at = verified_at
         user.status = UserStatus.active
         return user
+
+    async def set_mfa_secret(self, user_id: uuid.UUID, *, secret: str) -> User | None:
+        user = await self.get_by_id(user_id)
+        if user is None:
+            return None
+        user.mfa_totp_secret = secret
+        user.mfa_enabled = False
+        return user
+
+    async def enable_mfa(self, user_id: uuid.UUID) -> User | None:
+        user = await self.get_by_id(user_id)
+        if user is None:
+            return None
+        if not user.mfa_totp_secret:
+            return None
+        user.mfa_enabled = True
+        return user
+
+    async def disable_mfa(self, user_id: uuid.UUID) -> User | None:
+        user = await self.get_by_id(user_id)
+        if user is None:
+            return None
+        user.mfa_enabled = False
+        user.mfa_totp_secret = None
+        return user

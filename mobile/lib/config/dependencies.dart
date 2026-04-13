@@ -10,6 +10,7 @@ import 'package:mobile/features/music_search/data/repositories/echo_music_search
 import 'package:mobile/features/music_search/domain/ports/music_search_repository.dart';
 import 'package:mobile/features/profile_view/data/repositories/echo_profile_repository.dart';
 import 'package:mobile/features/profile_view/domain/ports/profile_repository.dart';
+import 'package:mobile/ui/core/themes/theme_mode_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -26,12 +27,19 @@ const _spotifyRedirectUri = String.fromEnvironment(
   defaultValue: 'echo-auth://callback',
 );
 const _googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+const _googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 
 List<SingleChildWidget> get providersLocal => [
+  ChangeNotifierProvider<ThemeModeController>(
+    create: (_) => ThemeModeController(),
+  ),
   ChangeNotifierProvider<AuthRepository>(
     create: (_) => EmailAuthRepository(
       echoBaseUrl: _echoBaseUrl,
-      googleClientIds: _googleClientId.isEmpty ? null : [_googleClientId],
+      googleClientId: _googleClientId.isEmpty ? null : _googleClientId,
+      googleServerClientId: _googleServerClientId.isEmpty
+          ? (_googleClientId.isEmpty ? null : _googleClientId)
+          : _googleServerClientId,
     ),
   ),
   ChangeNotifierProvider<SpotifyAuthRepositoryInterface>(

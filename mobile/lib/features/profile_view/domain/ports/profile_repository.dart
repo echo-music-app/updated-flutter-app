@@ -41,4 +41,12 @@ abstract interface class ProfileRepository {
     int pageSize = 20,
     String? cursor,
   });
+
+  /// Updates the authenticated user's profile fields.
+  ///
+  /// Throws [ProfileAuthException] for 401.
+  Future<ProfileHeader> updateOwnProfile({String? bio});
+
+  /// Uploads/replaces authenticated user's avatar image.
+  Future<ProfileHeader> uploadOwnAvatar(String filePath);
 }

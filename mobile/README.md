@@ -1,17 +1,23 @@
-# mobile
+# Mobile App
 
-A new Flutter project.
+## Local Run
+1. `flutter pub get`
+2. `flutter run --dart-define=ECHO_BASE_URL=http://10.0.2.2:8001`
 
-## Getting Started
+## Google Sign-In
+This app supports Google login/signup through backend `POST /v1/auth/google`.
 
-This project is a starting point for a Flutter application.
+Run with:
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+flutter run \
+  --dart-define=ECHO_BASE_URL=http://10.0.2.2:8001 \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-web-client-id>.apps.googleusercontent.com
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Optional:
+- `--dart-define=GOOGLE_CLIENT_ID=<client-id>`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Notes:
+- On Android, `GOOGLE_SERVER_CLIENT_ID` is required.
+- Backend must include the same Web client ID in `GOOGLE_CLIENT_IDS`.

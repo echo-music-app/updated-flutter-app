@@ -5,7 +5,15 @@ import re
 from sqlalchemy.exc import IntegrityError
 
 from backend.core.config import Settings
-from backend.core.security import generate_token, generate_verification_code, hash_password, hash_token, verify_password
+from backend.core.security import (
+    generate_token,
+    generate_totp_secret,
+    generate_verification_code,
+    hash_password,
+    hash_token,
+    verify_password,
+    verify_totp_code,
+)
 from backend.domain.auth.entities import GoogleIdentity, RegistrationResult, TokenPair, VerificationDispatch
 from backend.domain.auth.exceptions import (
     AccountDisabledError,
@@ -13,8 +21,11 @@ from backend.domain.auth.exceptions import (
     EmailNotVerifiedError,
     GoogleAccountConflictError,
     InvalidCredentialsError,
+    InvalidMfaCodeError,
     InvalidTokenError,
     InvalidVerificationCodeError,
+    MfaNotConfiguredError,
+    MfaRequiredError,
     UsernameTakenError,
 )
 from backend.domain.auth.repositories import ITokenRepository, IUserRepository
@@ -50,7 +61,7 @@ class AuthUseCases:
             verification_code=dispatch.verification_code,
         )
 
-    async def login(self, email: str, password: str) -> TokenPair:
+    async def login(self, email: str, password: str, mfa_code: str | None = None) -> TokenPair:
         user = await self._user_repo.get_by_email(email)
         if user is None or not verify_password(password, user.password_hash):
             raise InvalidCredentialsError("Invalid email or password")
@@ -58,8 +69,44 @@ class AuthUseCases:
             raise EmailNotVerifiedError("Email not verified")
         if str(user.status) == "disabled":
             raise AccountDisabledError("Account is disabled")
+        if getattr(user, "mfa_enabled", False):
+            secret = getattr(user, "mfa_totp_secret", None)
+            if not secret:
+                raise MfaNotConfiguredError("MFA is enabled but not configured")
+            if not mfa_code:
+                raise MfaRequiredError("MFA code required")
+            if not verify_totp_code(secret, mfa_code):
+                raise InvalidMfaCodeError("Invalid MFA code")
 
         return await self._issue_tokens(user.id, datetime.now(UTC))
+
+    async def setup_mfa(self, user_id: uuid.UUID) -> tuple[str, str]:
+        user = await self._user_repo.get_by_id(user_id)
+        if user is None:
+            raise InvalidCredentialsError("Invalid user")
+
+        secret = generate_totp_secret()
+        await self._user_repo.set_mfa_secret(user_id, secret=secret)
+        issuer = self._settings.app_name.replace(":", "").strip() or "Echo"
+        account = user.email
+        otpauth_uri = f"otpauth://totp/{issuer}:{account}?secret={secret}&issuer={issuer}&digits=6&period=30"
+        return secret, otpauth_uri
+
+    async def enable_mfa(self, user_id: uuid.UUID, code: str) -> None:
+        user = await self._user_repo.get_by_id(user_id)
+        if user is None or not user.mfa_totp_secret:
+            raise MfaNotConfiguredError("MFA setup was not started")
+        if not verify_totp_code(user.mfa_totp_secret, code):
+            raise InvalidMfaCodeError("Invalid MFA code")
+        await self._user_repo.enable_mfa(user_id)
+
+    async def disable_mfa(self, user_id: uuid.UUID, code: str) -> None:
+        user = await self._user_repo.get_by_id(user_id)
+        if user is None or not user.mfa_enabled or not user.mfa_totp_secret:
+            raise MfaNotConfiguredError("MFA is not enabled")
+        if not verify_totp_code(user.mfa_totp_secret, code):
+            raise InvalidMfaCodeError("Invalid MFA code")
+        await self._user_repo.disable_mfa(user_id)
 
     async def login_with_google(self, identity: GoogleIdentity) -> TokenPair:
         if not identity.email_verified:

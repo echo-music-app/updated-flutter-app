@@ -7,6 +7,8 @@ import 'package:mobile/features/profile_view/domain/ports/profile_repository.dar
 import 'package:mobile/features/profile_view/domain/use_cases/load_profile_header.dart';
 import 'package:mobile/features/profile_view/domain/use_cases/load_profile_posts_page.dart';
 import 'package:mobile/features/profile_view/domain/use_cases/resolve_profile_target.dart';
+import 'package:mobile/features/profile_view/domain/use_cases/update_own_profile.dart';
+import 'package:mobile/features/profile_view/domain/use_cases/upload_own_avatar.dart';
 import 'package:mobile/features/profile_view/presentation/profile_screen.dart';
 import 'package:mobile/features/profile_view/presentation/profile_view_model.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
@@ -73,6 +75,18 @@ class _StubRepo implements ProfileRepository {
     if (postsError != null) throw postsError!;
     return _ownPosts!();
   }
+
+  @override
+  Future<ProfileHeader> updateOwnProfile({String? bio}) async {
+    if (ownError != null) throw ownError!;
+    return _ownProfile!();
+  }
+
+  @override
+  Future<ProfileHeader> uploadOwnAvatar(String filePath) async {
+    if (ownError != null) throw ownError!;
+    return _ownProfile!();
+  }
 }
 
 ProfileViewModel _vm(_StubRepo repo, {String? currentUserId}) {
@@ -80,6 +94,8 @@ ProfileViewModel _vm(_StubRepo repo, {String? currentUserId}) {
     resolveTarget: const ResolveProfileTargetUseCase(),
     loadHeader: LoadProfileHeaderUseCase(repository: repo),
     loadPostsPage: LoadProfilePostsPageUseCase(repository: repo),
+    updateOwnProfile: UpdateOwnProfileUseCase(repository: repo),
+    uploadOwnAvatar: UploadOwnAvatarUseCase(repository: repo),
     currentUserId: currentUserId,
   );
 }

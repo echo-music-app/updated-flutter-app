@@ -10,7 +10,10 @@ class LoginViewModel extends ChangeNotifier {
     SpotifyAuthRepositoryInterface? spotifyAuthRepository,
   }) : _auth = authRepository,
        _spotifyAuth = spotifyAuthRepository {
-    _loginCmd = Command1<void, ({String email, String password})>(_loginFn);
+    _loginCmd =
+        Command1<void, ({String email, String password, String? mfaCode})>(
+          _loginFn,
+        );
     _registerCmd =
         Command1<void, ({String email, String username, String password})>(
           _registerFn,
@@ -31,7 +34,8 @@ class LoginViewModel extends ChangeNotifier {
 
   final AuthRepository _auth;
   final SpotifyAuthRepositoryInterface? _spotifyAuth;
-  late final Command1<void, ({String email, String password})> _loginCmd;
+  late final Command1<void, ({String email, String password, String? mfaCode})>
+  _loginCmd;
   late final Command1<void, ({String email, String username, String password})>
   _registerCmd;
   late final Command0<void> _connectCmd;
@@ -40,10 +44,12 @@ class LoginViewModel extends ChangeNotifier {
   late final Command1<void, String> _resendVerificationCmd;
 
   PendingVerification? _pendingVerification;
+  bool _mfaRequired = false;
 
   bool get isAuthenticated => _auth.isAuthenticated;
   bool get supportsTfa => _auth.supportsTfa;
   PendingVerification? get pendingVerification => _pendingVerification;
+  bool get mfaRequired => _mfaRequired;
 
   bool get isLoading =>
       _loginCmd.running ||
@@ -71,8 +77,11 @@ class LoginViewModel extends ChangeNotifier {
     return null;
   }
 
-  Future<void> loginWithEmail(String email, String password) =>
-      _loginCmd.execute((email: email, password: password));
+  Future<void> loginWithEmail(
+    String email,
+    String password, {
+    String? mfaCode,
+  }) => _loginCmd.execute((email: email, password: password, mfaCode: mfaCode));
 
   Future<void> register(String email, String username, String password) =>
       _registerCmd.execute((
@@ -88,18 +97,26 @@ class LoginViewModel extends ChangeNotifier {
   Future<void> resendVerificationCode(String email) =>
       _resendVerificationCmd.execute(email);
 
-  Future<Result<void>> _loginFn(({String email, String password}) c) async {
+  Future<Result<void>> _loginFn(
+    ({String email, String password, String? mfaCode}) c,
+  ) async {
     try {
-      await _auth.loginWithEmail(c.email, c.password);
+      await _auth.loginWithEmail(c.email, c.password, mfaCode: c.mfaCode);
       _pendingVerification = null;
+      _mfaRequired = false;
       return Result.ok(null);
     } on Exception catch (e) {
       if (e.toString().toLowerCase().contains('email not verified')) {
+        _mfaRequired = false;
         _pendingVerification = PendingVerification(
           email: c.email,
           message: 'Email not verified. Please enter the verification code.',
           expiresInSeconds: 900,
         );
+      } else if (e.toString().toLowerCase().contains('mfa code required') ||
+          e.toString().toLowerCase().contains('invalid mfa code')) {
+        _pendingVerification = null;
+        _mfaRequired = true;
       }
       return Result.error(e);
     }
@@ -109,6 +126,7 @@ class LoginViewModel extends ChangeNotifier {
     ({String email, String username, String password}) c,
   ) async {
     try {
+      _mfaRequired = false;
       _pendingVerification = await _auth.register(
         c.email,
         c.username,
@@ -133,6 +151,7 @@ class LoginViewModel extends ChangeNotifier {
     try {
       await _auth.loginWithGoogle();
       _pendingVerification = null;
+      _mfaRequired = false;
       return Result.ok(null);
     } on Exception catch (e) {
       return Result.error(e);
@@ -143,6 +162,7 @@ class LoginViewModel extends ChangeNotifier {
     try {
       await _auth.verifyEmail(c.email, c.code);
       _pendingVerification = null;
+      _mfaRequired = false;
       return Result.ok(null);
     } on Exception catch (e) {
       return Result.error(e);
@@ -151,6 +171,7 @@ class LoginViewModel extends ChangeNotifier {
 
   Future<Result<void>> _resendVerificationFn(String email) async {
     try {
+      _mfaRequired = false;
       _pendingVerification = await _auth.resendVerificationCode(email);
       return Result.ok(null);
     } on Exception catch (e) {

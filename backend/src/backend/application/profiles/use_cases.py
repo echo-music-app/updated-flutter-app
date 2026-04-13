@@ -70,3 +70,6 @@ class ProfileUseCases:
             bio=normalized.bio,
             preferred_genres=normalized.preferred_genres,
         )
+
+    async def update_me_avatar(self, user_id: uuid.UUID, avatar_path: str) -> MeProfile:
+        return await self._profile_repo.update_me_avatar(user_id, avatar_path=avatar_path)

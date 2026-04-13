@@ -7,6 +7,7 @@ business logic lives in application/use_cases/.
 from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,8 +18,12 @@ from backend.infrastructure.persistence.models.admin_auth import AdminAccessToke
 from backend.infrastructure.persistence.models.auth import AccessToken
 
 
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
 async def get_current_admin(
     request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db_session),
 ) -> AdminAccount:
     """Resolve and validate the current admin from the request's Bearer token.
@@ -27,11 +32,10 @@ async def get_current_admin(
         HTTPException 401: Missing or invalid token.
         HTTPException 403: Valid token but admin account is inactive.
     """
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+    if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
 
-    raw_token = auth_header[7:]
+    raw_token = credentials.credentials
     token_hash = hash_token(raw_token)
 
     result = await db.execute(

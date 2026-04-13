@@ -9,6 +9,7 @@ from datetime import datetime
 class PublicUserProfile:
     id: uuid.UUID
     username: str
+    avatar_path: str | None
     bio: str | None
     preferred_genres: list[str]
     is_artist: bool
@@ -20,6 +21,7 @@ class MeProfile:
     id: uuid.UUID
     email: str
     username: str
+    avatar_path: str | None
     bio: str | None
     preferred_genres: list[str]
     status: str

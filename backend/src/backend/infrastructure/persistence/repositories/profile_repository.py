@@ -23,6 +23,7 @@ class SqlAlchemyProfileRepository:
         return PublicUserProfile(
             id=user.id,
             username=user.username,
+            avatar_path=user.avatar_path,
             bio=user.bio,
             preferred_genres=list(user.preferred_genres),
             is_artist=user.is_artist,
@@ -65,12 +66,29 @@ class SqlAlchemyProfileRepository:
         await self._session.refresh(user)
         return _user_to_me_profile(user)
 
+    async def update_me_avatar(
+        self,
+        user_id: uuid.UUID,
+        *,
+        avatar_path: str,
+    ) -> MeProfile:
+        result = await self._session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise ProfileNotFoundError(f"User {user_id} not found")
+
+        user.avatar_path = avatar_path
+        await self._session.flush()
+        await self._session.refresh(user)
+        return _user_to_me_profile(user)
+
 
 def _user_to_me_profile(user: User) -> MeProfile:
     return MeProfile(
         id=user.id,
         email=user.email,
         username=user.username,
+        avatar_path=user.avatar_path,
         bio=user.bio,
         preferred_genres=list(user.preferred_genres),
         status=str(user.status.value if hasattr(user.status, "value") else user.status),

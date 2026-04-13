@@ -44,3 +44,15 @@ class GoogleAuthNotConfiguredError(Exception):
 
 class GoogleAccountConflictError(Exception):
     pass
+
+
+class MfaRequiredError(Exception):
+    pass
+
+
+class InvalidMfaCodeError(Exception):
+    pass
+
+
+class MfaNotConfiguredError(Exception):
+    pass

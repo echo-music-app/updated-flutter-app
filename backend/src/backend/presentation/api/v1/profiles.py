@@ -1,9 +1,11 @@
-"""Profiles API adapter — GET /v1/users/{userId}, GET /v1/me, PATCH /v1/me."""
+﻿"""Profiles API adapter - GET /v1/users/{userId}, GET /v1/me, PATCH /v1/me."""
 
 import uuid
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,16 +20,19 @@ from backend.infrastructure.persistence.repositories.profile_repository import S
 router = APIRouter(tags=["profiles"])
 
 _NON_MUTABLE_FIELD_NAMES = {"email", "status", "password_hash", "is_artist"}
-
-
-# ---------------------------------------------------------------------------
-# Response models
-# ---------------------------------------------------------------------------
+_ALLOWED_AVATAR_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+_MAX_AVATAR_BYTES = 5 * 1024 * 1024
+_AVATAR_DIR = Path(__file__).resolve().parents[5] / "uploads" / "avatars"
 
 
 class PublicUserProfileResponse(BaseModel):
     id: uuid.UUID
     username: str
+    avatar_url: str | None
     bio: str | None
     preferred_genres: list[str]
     is_artist: bool
@@ -38,17 +43,13 @@ class MeProfileResponse(BaseModel):
     id: uuid.UUID
     email: str
     username: str
+    avatar_url: str | None
     bio: str | None
     preferred_genres: list[str]
     status: str
     is_artist: bool
     created_at: datetime
     updated_at: datetime
-
-
-# ---------------------------------------------------------------------------
-# Request model
-# ---------------------------------------------------------------------------
 
 
 class PatchMeRequest(BaseModel):
@@ -66,24 +67,21 @@ class PatchMeRequest(BaseModel):
         return values
 
 
-# ---------------------------------------------------------------------------
-# Dependency factory
-# ---------------------------------------------------------------------------
-
-
 def _get_profile_use_cases(db: AsyncSession = Depends(get_db_session)) -> ProfileUseCases:
     return ProfileUseCases(profile_repo=SqlAlchemyProfileRepository(db))
 
 
-# ---------------------------------------------------------------------------
-# Response mappers
-# ---------------------------------------------------------------------------
+def _avatar_url(user_id: uuid.UUID, avatar_path: str | None) -> str | None:
+    if not avatar_path:
+        return None
+    return f"/v1/users/{user_id}/avatar"
 
 
 def _to_public_response(profile: PublicUserProfile) -> PublicUserProfileResponse:
     return PublicUserProfileResponse(
         id=profile.id,
         username=profile.username,
+        avatar_url=_avatar_url(profile.id, profile.avatar_path),
         bio=profile.bio,
         preferred_genres=profile.preferred_genres,
         is_artist=profile.is_artist,
@@ -96,6 +94,7 @@ def _to_me_response(profile: MeProfile) -> MeProfileResponse:
         id=profile.id,
         email=profile.email,
         username=profile.username,
+        avatar_url=_avatar_url(profile.id, profile.avatar_path),
         bio=profile.bio,
         preferred_genres=profile.preferred_genres,
         status=profile.status,
@@ -103,11 +102,6 @@ def _to_me_response(profile: MeProfile) -> MeProfileResponse:
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 
 @router.get("/users/{userId}", response_model=PublicUserProfileResponse)
@@ -153,3 +147,51 @@ async def patch_me_profile(
     except UsernameConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _to_me_response(profile)
+
+
+@router.post("/me/avatar", response_model=MeProfileResponse)
+async def upload_me_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    use_cases: ProfileUseCases = Depends(_get_profile_use_cases),
+):
+    extension = _ALLOWED_AVATAR_TYPES.get(file.content_type or "")
+    if extension is None:
+        raise HTTPException(status_code=415, detail="Unsupported avatar type. Use jpg, png, or webp.")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="Avatar file is empty.")
+    if len(content) > _MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=413, detail="Avatar file too large (max 5 MB).")
+
+    _AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{current_user.id}{extension}"
+    output_path = _AVATAR_DIR / filename
+    output_path.write_bytes(content)
+
+    profile = await use_cases.update_me_avatar(current_user.id, avatar_path=filename)
+    return _to_me_response(profile)
+
+
+@router.get("/users/{userId}/avatar")
+async def get_user_avatar(
+    userId: uuid.UUID,
+    use_cases: ProfileUseCases = Depends(_get_profile_use_cases),
+):
+    try:
+        profile = await use_cases.get_user_profile(userId)
+    except ProfileNotFoundError:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not profile.avatar_path:
+        raise HTTPException(status_code=404, detail="Avatar not found")
+
+    avatar_root = _AVATAR_DIR.resolve()
+    file_path = (_AVATAR_DIR / profile.avatar_path).resolve()
+    if not file_path.is_relative_to(avatar_root):
+        raise HTTPException(status_code=404, detail="Avatar not found")
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Avatar not found")
+
+    return FileResponse(file_path)

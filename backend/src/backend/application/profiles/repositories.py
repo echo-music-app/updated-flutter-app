@@ -19,3 +19,10 @@ class IProfileRepository(Protocol):
         bio: str | None = None,
         preferred_genres: list[str] | None = None,
     ) -> MeProfile: ...
+
+    async def update_me_avatar(
+        self,
+        user_id: uuid.UUID,
+        *,
+        avatar_path: str,
+    ) -> MeProfile: ...
