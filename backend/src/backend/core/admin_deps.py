@@ -31,10 +31,22 @@ async def get_current_admin(
         HTTPException 401: Missing or invalid token.
         HTTPException 403: Valid token but admin account is inactive.
     """
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    raw_token: str | None = None
+    if isinstance(credentials, HTTPAuthorizationCredentials):
+        if credentials.scheme.lower() == "bearer":
+            raw_token = credentials.credentials
+    else:
+        auth_header = request.headers.get("Authorization", "")
+        scheme, _, token = auth_header.partition(" ")
+        if scheme.lower() == "bearer" and token.strip():
+            raw_token = token.strip()
 
-    raw_token = credentials.credentials
+    if raw_token is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid authorization header",
+        )
+
     token_hash = hash_token(raw_token)
 
     result = await db.execute(

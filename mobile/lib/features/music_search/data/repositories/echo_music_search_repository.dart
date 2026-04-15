@@ -188,22 +188,20 @@ class EchoMusicSearchRepository implements MusicSearchRepository {
   @override
   Future<MusicSearchResultGroup> search(String query) async {
     try {
-      final responses = await Future.wait([
-        _postWithAuthRetry('$_echoBaseUrl/v1/search/music', data: {'q': query}),
-        _getWithAuthRetry(
-          '$_echoBaseUrl/v1/users/search',
-          queryParameters: {'q': query, 'limit': 20},
-        ),
-      ]);
-      final musicResponse = responses[0];
-      final userResponse = responses[1];
+      final usersFuture = _getWithAuthRetry(
+        '$_echoBaseUrl/v1/users/search',
+        queryParameters: {'q': query, 'limit': 20},
+      ).then((response) => _mapUsersResponse(response.data)).catchError(
+        (_) => const <UserSearchResult>[],
+      );
+      final musicResponse = await _postWithAuthRetry(
+        '$_echoBaseUrl/v1/search/music',
+        data: {'q': query},
+      );
       final musicGroup = _mapResponse(
         musicResponse.data as Map<String, dynamic>,
       );
-      final users = (userResponse.data as List<dynamic>)
-          .map((u) => _mapUser(u as Map<String, dynamic>))
-          .where((u) => u.id.isNotEmpty && u.username.isNotEmpty)
-          .toList();
+      final users = await usersFuture;
 
       return MusicSearchResultGroup(
         query: musicGroup.query,
@@ -217,5 +215,19 @@ class EchoMusicSearchRepository implements MusicSearchRepository {
     } on DioException catch (e) {
       _translateError(e);
     }
+  }
+
+  List<UserSearchResult> _mapUsersResponse(dynamic raw) {
+    final rawList = switch (raw) {
+      final List<dynamic> list => list,
+      final Map<String, dynamic> map => (map['items'] as List<dynamic>?) ?? [],
+      _ => const <dynamic>[],
+    };
+
+    return rawList
+        .whereType<Map<String, dynamic>>()
+        .map(_mapUser)
+        .where((u) => u.id.isNotEmpty && u.username.isNotEmpty)
+        .toList(growable: false);
   }
 }
