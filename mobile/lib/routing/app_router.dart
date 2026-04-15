@@ -18,6 +18,7 @@ import 'package:mobile/features/profile_view/domain/use_cases/update_own_profile
 import 'package:mobile/features/profile_view/domain/use_cases/upload_own_avatar.dart';
 import 'package:mobile/features/profile_view/presentation/profile_screen.dart';
 import 'package:mobile/features/profile_view/presentation/profile_view_model.dart';
+import 'package:mobile/ui/home/echo_home_feed_repository.dart';
 import 'package:mobile/ui/home/home_screen.dart';
 import 'package:mobile/ui/home/home_view_model.dart';
 import 'package:mobile/ui/login/login_view_model.dart';
@@ -27,6 +28,11 @@ import 'package:mobile/ui/player/player_screen.dart';
 import 'package:mobile/ui/player/player_view_model.dart';
 import 'package:mobile/ui/player_webview/player_webview_screen.dart';
 import 'package:mobile/ui/player_webview/player_webview_view_model.dart';
+import 'package:mobile/ui/notifications/echo_notifications_repository.dart';
+import 'package:mobile/ui/notifications/notifications_screen.dart';
+import 'package:mobile/ui/notifications/notifications_view_model.dart';
+import 'package:mobile/ui/post/create_post_screen.dart';
+import 'package:mobile/ui/post/echo_post_repository.dart';
 import 'package:provider/provider.dart';
 
 const _echoBaseUrl = String.fromEnvironment(
@@ -50,13 +56,19 @@ GoRouter appRouter(AuthRepository authRepository) => GoRouter(
   routes: [
     GoRoute(
       path: Routes.home,
-      builder: (ctx, _) => HomeScreen(viewModel: HomeViewModel()),
+      builder: (ctx, _) => HomeScreen(
+        viewModel: HomeViewModel(
+          repository: EchoHomeFeedRepository(
+            echoBaseUrl: _echoBaseUrl,
+            getAccessToken: authRepository.getAccessToken,
+            refreshAccessToken: authRepository.refreshAccessToken,
+          ),
+        ),
+      ),
     ),
     GoRoute(
       path: Routes.login,
-      builder: (ctx, _) => LoginScreen(
-        viewModel: _buildLoginViewModel(ctx),
-      ),
+      builder: (ctx, _) => LoginScreen(viewModel: _buildLoginViewModel(ctx)),
     ),
     GoRoute(
       path: Routes.verifyEmail,
@@ -83,9 +95,26 @@ GoRouter appRouter(AuthRepository authRepository) => GoRouter(
       ),
     ),
     GoRoute(
+      path: Routes.notifications,
+      builder: (ctx, _) => NotificationsScreen(
+        viewModel: _buildNotificationsViewModel(ctx, authRepository),
+      ),
+    ),
+    GoRoute(
       path: Routes.search,
       builder: (ctx, _) => MusicSearchScreen(
         viewModel: _buildSearchViewModel(ctx, authRepository),
+      ),
+    ),
+    GoRoute(
+      path: Routes.createPost,
+      builder: (ctx, _) => CreatePostScreen(
+        repository: EchoPostRepository(
+          echoBaseUrl: _echoBaseUrl,
+          getAccessToken: authRepository.getAccessToken,
+          refreshAccessToken: authRepository.refreshAccessToken,
+        ),
+        onAuthExpired: authRepository.clearSession,
       ),
     ),
     GoRoute(
@@ -107,6 +136,21 @@ LoginViewModel _buildLoginViewModel(BuildContext ctx) {
   return LoginViewModel(
     authRepository: ctx.read<AuthRepository>(),
     spotifyAuthRepository: ctx.read<SpotifyAuthRepositoryInterface>(),
+  );
+}
+
+NotificationsViewModel _buildNotificationsViewModel(
+  BuildContext ctx,
+  AuthRepository authRepository,
+) {
+  final repo = EchoNotificationsRepository(
+    echoBaseUrl: _echoBaseUrl,
+    getAccessToken: authRepository.getAccessToken,
+    refreshAccessToken: authRepository.refreshAccessToken,
+  );
+  return NotificationsViewModel(
+    repository: repo,
+    onAuthExpired: authRepository.clearSession,
   );
 }
 
@@ -142,5 +186,8 @@ ProfileViewModel _buildProfileViewModel(
     updateOwnProfile: UpdateOwnProfileUseCase(repository: repo),
     uploadOwnAvatar: UploadOwnAvatarUseCase(repository: repo),
     currentUserId: null,
+    getFollowStatus: repo.getFollowStatus,
+    sendFollowRequest: repo.sendFollowRequest,
+    acceptFollowRequest: repo.acceptFollowRequest,
   );
 }

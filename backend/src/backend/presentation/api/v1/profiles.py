@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +36,8 @@ class PublicUserProfileResponse(BaseModel):
     bio: str | None
     preferred_genres: list[str]
     is_artist: bool
+    followers_count: int
+    following_count: int
     created_at: datetime
 
 
@@ -48,6 +50,8 @@ class MeProfileResponse(BaseModel):
     preferred_genres: list[str]
     status: str
     is_artist: bool
+    followers_count: int
+    following_count: int
     created_at: datetime
     updated_at: datetime
 
@@ -85,6 +89,8 @@ def _to_public_response(profile: PublicUserProfile) -> PublicUserProfileResponse
         bio=profile.bio,
         preferred_genres=profile.preferred_genres,
         is_artist=profile.is_artist,
+        followers_count=profile.followers_count,
+        following_count=profile.following_count,
         created_at=profile.created_at,
     )
 
@@ -99,9 +105,26 @@ def _to_me_response(profile: MeProfile) -> MeProfileResponse:
         preferred_genres=profile.preferred_genres,
         status=profile.status,
         is_artist=profile.is_artist,
+        followers_count=profile.followers_count,
+        following_count=profile.following_count,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
+
+
+@router.get("/users/search", response_model=list[PublicUserProfileResponse])
+async def search_users(
+    q: str = Query(..., min_length=1, max_length=50),
+    limit: int = Query(default=20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    use_cases: ProfileUseCases = Depends(_get_profile_use_cases),
+):
+    profiles = await use_cases.search_users(
+        q,
+        limit=limit,
+        exclude_user_id=current_user.id,
+    )
+    return [_to_public_response(profile) for profile in profiles]
 
 
 @router.get("/users/{userId}", response_model=PublicUserProfileResponse)

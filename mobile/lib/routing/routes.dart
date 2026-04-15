@@ -4,6 +4,8 @@ abstract final class Routes {
   static const verifyEmail = '/verify-email';
   static const player = '/player';
   static const playerWebView = '/player-webview';
+  static const notifications = '/notifications';
+  static const createPost = '/create-post';
   static const profile = '/profile';
   static const profileUser = '/profile/:userId';
   static const search = '/search';

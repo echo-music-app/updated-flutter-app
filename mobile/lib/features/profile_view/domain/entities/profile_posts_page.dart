@@ -1,8 +1,15 @@
 class PostAttachmentSummary {
-  const PostAttachmentSummary({required this.id, required this.type});
+  const PostAttachmentSummary({
+    required this.id,
+    required this.type,
+    this.content,
+    this.url,
+  });
 
   final String id;
   final String type;
+  final String? content;
+  final String? url;
 }
 
 class ProfilePostSummary {

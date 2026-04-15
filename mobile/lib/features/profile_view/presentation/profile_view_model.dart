@@ -22,6 +22,9 @@ class ProfileViewState {
     this.canLoadMore = false,
     this.isSavingBio = false,
     this.isUploadingAvatar = false,
+    this.followRelationStatus = FollowRelationStatus.none,
+    this.isFollowActionInProgress = false,
+    this.followStatusLoaded = false,
     this.localAvatarPath,
   });
 
@@ -33,6 +36,9 @@ class ProfileViewState {
   final bool canLoadMore;
   final bool isSavingBio;
   final bool isUploadingAvatar;
+  final FollowRelationStatus followRelationStatus;
+  final bool isFollowActionInProgress;
+  final bool followStatusLoaded;
   final String? localAvatarPath;
 
   ProfileViewState copyWith({
@@ -45,6 +51,9 @@ class ProfileViewState {
     bool? canLoadMore,
     bool? isSavingBio,
     bool? isUploadingAvatar,
+    FollowRelationStatus? followRelationStatus,
+    bool? isFollowActionInProgress,
+    bool? followStatusLoaded,
     String? localAvatarPath,
     bool clearLocalAvatarPath = false,
   }) {
@@ -57,6 +66,10 @@ class ProfileViewState {
       canLoadMore: canLoadMore ?? this.canLoadMore,
       isSavingBio: isSavingBio ?? this.isSavingBio,
       isUploadingAvatar: isUploadingAvatar ?? this.isUploadingAvatar,
+      followRelationStatus: followRelationStatus ?? this.followRelationStatus,
+      isFollowActionInProgress:
+          isFollowActionInProgress ?? this.isFollowActionInProgress,
+      followStatusLoaded: followStatusLoaded ?? this.followStatusLoaded,
       localAvatarPath: clearLocalAvatarPath
           ? null
           : (localAvatarPath ?? this.localAvatarPath),
@@ -72,12 +85,18 @@ class ProfileViewModel extends ChangeNotifier {
     required UpdateOwnProfileUseCase updateOwnProfile,
     required UploadOwnAvatarUseCase uploadOwnAvatar,
     required String? currentUserId,
+    Future<FollowRelationStatus> Function(String userId)? getFollowStatus,
+    Future<void> Function(String userId)? sendFollowRequest,
+    Future<void> Function(String userId)? acceptFollowRequest,
   }) : _resolveTarget = resolveTarget,
        _loadHeader = loadHeader,
        _loadPostsPage = loadPostsPage,
        _updateOwnProfile = updateOwnProfile,
        _uploadOwnAvatar = uploadOwnAvatar,
-       _currentUserId = currentUserId;
+       _currentUserId = currentUserId,
+       _getFollowStatus = getFollowStatus,
+       _sendFollowRequest = sendFollowRequest,
+       _acceptFollowRequest = acceptFollowRequest;
 
   final ResolveProfileTargetUseCase _resolveTarget;
   final LoadProfileHeaderUseCase _loadHeader;
@@ -85,6 +104,9 @@ class ProfileViewModel extends ChangeNotifier {
   final UpdateOwnProfileUseCase _updateOwnProfile;
   final UploadOwnAvatarUseCase _uploadOwnAvatar;
   final String? _currentUserId;
+  final Future<FollowRelationStatus> Function(String userId)? _getFollowStatus;
+  final Future<void> Function(String userId)? _sendFollowRequest;
+  final Future<void> Function(String userId)? _acceptFollowRequest;
 
   ProfileViewState _state = const ProfileViewState();
   ProfileViewState get state => _state;
@@ -105,7 +127,32 @@ class ProfileViewModel extends ChangeNotifier {
     _nextCursor = null;
     _emit(const ProfileViewState());
 
-    await Future.wait([_fetchHeader(), _fetchFirstPostsPage()]);
+    await Future.wait([
+      _fetchHeader(),
+      _fetchFirstPostsPage(),
+      _fetchFollowStatus(),
+    ]);
+  }
+
+  Future<void> _fetchFollowStatus() async {
+    final target = _target;
+    final targetUserId = target?.targetUserId;
+    if (target == null ||
+        target.mode != ProfileMode.other ||
+        targetUserId == null ||
+        targetUserId.isEmpty ||
+        _getFollowStatus == null) {
+      return;
+    }
+
+    try {
+      final status = await _getFollowStatus(targetUserId);
+      _emit(
+        _state.copyWith(followRelationStatus: status, followStatusLoaded: true),
+      );
+    } catch (_) {
+      _emit(_state.copyWith(followStatusLoaded: true));
+    }
   }
 
   Future<void> _fetchHeader() async {
@@ -217,7 +264,9 @@ class ProfileViewModel extends ChangeNotifier {
 
   Future<void> saveBio(String bio) async {
     if (_target?.mode != ProfileMode.own || _state.header == null) {
-      throw const ProfileLoadException('Bio can only be edited on your profile');
+      throw const ProfileLoadException(
+        'Bio can only be edited on your profile',
+      );
     }
 
     _emit(_state.copyWith(isSavingBio: true));
@@ -246,15 +295,12 @@ class ProfileViewModel extends ChangeNotifier {
 
   Future<void> uploadAvatar(String path) async {
     if (_target?.mode != ProfileMode.own || _state.header == null) {
-      throw const ProfileLoadException('Avatar can only be edited on your profile');
+      throw const ProfileLoadException(
+        'Avatar can only be edited on your profile',
+      );
     }
 
-    _emit(
-      _state.copyWith(
-        isUploadingAvatar: true,
-        localAvatarPath: path,
-      ),
-    );
+    _emit(_state.copyWith(isUploadingAvatar: true, localAvatarPath: path));
 
     try {
       final updated = await _uploadOwnAvatar(path);
@@ -278,11 +324,67 @@ class ProfileViewModel extends ChangeNotifier {
       rethrow;
     } catch (_) {
       _emit(
+        _state.copyWith(isUploadingAvatar: false, clearLocalAvatarPath: true),
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> performFollowAction() async {
+    final target = _target;
+    final targetUserId = target?.targetUserId;
+    if (target == null ||
+        target.mode != ProfileMode.other ||
+        targetUserId == null ||
+        targetUserId.isEmpty) {
+      throw const ProfileLoadException(
+        'Cannot update relationship for this profile',
+      );
+    }
+
+    _emit(_state.copyWith(isFollowActionInProgress: true));
+    try {
+      if (_state.followRelationStatus == FollowRelationStatus.pendingIncoming) {
+        if (_acceptFollowRequest == null) {
+          throw const ProfileLoadException('Accept action is unavailable');
+        }
+        await _acceptFollowRequest(targetUserId);
+      } else {
+        if (_sendFollowRequest == null) {
+          throw const ProfileLoadException('Follow action is unavailable');
+        }
+        await _sendFollowRequest(targetUserId);
+      }
+
+      final refreshed = _getFollowStatus == null
+          ? FollowRelationStatus.accepted
+          : await _getFollowStatus(targetUserId);
+
+      ProfileHeader? refreshedHeader = _state.header;
+      try {
+        refreshedHeader = await _loadHeader(_target!);
+      } catch (_) {
+        // Keep existing header if refresh fails.
+      }
+
+      _emit(
         _state.copyWith(
-          isUploadingAvatar: false,
-          clearLocalAvatarPath: true,
+          header: refreshedHeader,
+          followRelationStatus: refreshed,
+          followStatusLoaded: true,
+          isFollowActionInProgress: false,
         ),
       );
+    } on ProfileAuthException {
+      _emit(
+        _state.copyWith(
+          headerState: HeaderLoadState.authRequired,
+          isFollowActionInProgress: false,
+        ),
+      );
+      rethrow;
+    } catch (_) {
+      _emit(_state.copyWith(isFollowActionInProgress: false));
       rethrow;
     }
   }
@@ -301,6 +403,8 @@ class ProfileViewModel extends ChangeNotifier {
       bio: header.bio,
       preferredGenres: header.preferredGenres,
       isArtist: header.isArtist,
+      followersCount: header.followersCount,
+      followingCount: header.followingCount,
       imageState: header.imageState,
       createdAt: header.createdAt,
     );

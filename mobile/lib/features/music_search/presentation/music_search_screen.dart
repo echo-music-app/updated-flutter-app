@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile/features/music_search/domain/entities/music_search_result.dart';
 import 'package:mobile/features/music_search/presentation/music_search_view_model.dart';
 import 'package:mobile/features/music_search/presentation/widgets/album_search_result_tile.dart';
 import 'package:mobile/features/music_search/presentation/widgets/artist_search_result_tile.dart';
 import 'package:mobile/features/music_search/presentation/widgets/track_search_result_tile.dart';
+import 'package:mobile/features/music_search/presentation/widgets/user_search_result_tile.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
+import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
+import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
 
 class MusicSearchScreen extends StatefulWidget {
   const MusicSearchScreen({super.key, required this.viewModel});
@@ -63,6 +67,9 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: const AppBottomNavBar(
+        currentTab: AppBottomNavTab.search,
       ),
     );
   }
@@ -125,6 +132,10 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
                       value: SearchResultType.artists,
                       label: Text(l10n.searchSegmentArtists),
                     ),
+                    const ButtonSegment(
+                      value: SearchResultType.users,
+                      label: Text('Users'),
+                    ),
                   ],
                   selected: {state.selectedType},
                   onSelectionChanged: (selection) {
@@ -172,6 +183,14 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
           itemBuilder: (_, i) =>
               ArtistSearchResultTile(artist: results.artists[i]),
         );
+      case SearchResultType.users:
+        return ListView.builder(
+          itemCount: results.users.length,
+          itemBuilder: (_, i) => UserSearchResultTile(
+            user: results.users[i],
+            onTap: () => context.go('${Routes.profile}/${results.users[i].id}'),
+          ),
+        );
     }
   }
 
@@ -183,6 +202,8 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
         return l10n.searchAlbumsEmptyMessage;
       case SearchResultType.artists:
         return l10n.searchArtistsEmptyMessage;
+      case SearchResultType.users:
+        return 'No users found';
     }
   }
 }

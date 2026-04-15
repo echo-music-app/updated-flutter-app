@@ -55,6 +55,22 @@ class ProfileUseCases:
             raise ProfileNotFoundError(f"User {user_id} not found")
         return profile
 
+    async def search_users(
+        self,
+        query: str,
+        *,
+        limit: int = 20,
+        exclude_user_id: uuid.UUID | None = None,
+    ) -> list[PublicUserProfile]:
+        trimmed = query.strip()
+        if not trimmed:
+            return []
+        return await self._profile_repo.search_public_by_username(
+            trimmed,
+            limit=limit,
+            exclude_user_id=exclude_user_id,
+        )
+
     async def get_me_profile(self, user_id: uuid.UUID) -> MeProfile:
         profile = await self._profile_repo.get_me_by_id(user_id)
         if profile is None:

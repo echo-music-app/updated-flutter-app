@@ -22,12 +22,16 @@ Widget _buildTestApp(Widget child) {
 }
 
 class _StubHomeViewModel extends HomeViewModel {
-  _StubHomeViewModel(this._state);
+  _StubHomeViewModel(this._state, {this.stubPosts = const []});
 
   final HomeScreenState _state;
+  final List<HomeFeedPost> stubPosts;
 
   @override
   HomeScreenState get state => _state;
+
+  @override
+  List<HomeFeedPost> get posts => stubPosts;
 }
 
 void main() {
@@ -73,18 +77,31 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Feed'), findsOneWidget);
   });
 
-  testWidgets('data state renders Search Music navigation entry', (
-    tester,
-  ) async {
+  testWidgets('data state renders sample feed posts', (tester) async {
+    final posts = [
+      HomeFeedPost(
+        id: 'post-1',
+        userId: 'user-1',
+        userName: 'Natalie Cooper',
+        userHandle: '@nataliecooper',
+        text: 'Loving the vibe of this track.',
+        spotifyUrl: 'https://open.spotify.com/track/lostinthesound',
+        createdAt: DateTime(2026, 4, 14),
+      ),
+    ];
     await tester.pumpWidget(
       _buildTestApp(
-        HomeScreen(viewModel: _StubHomeViewModel(HomeScreenState.data)),
+        HomeScreen(
+          viewModel: _StubHomeViewModel(HomeScreenState.data, stubPosts: posts),
+        ),
       ),
     );
     await tester.pump();
-    expect(find.widgetWithText(ElevatedButton, 'Search Music'), findsOneWidget);
+    expect(find.text('Natalie Cooper'), findsOneWidget);
+    expect(find.text('Loving the vibe of this track.'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Spotify'), findsWidgets);
   });
 }

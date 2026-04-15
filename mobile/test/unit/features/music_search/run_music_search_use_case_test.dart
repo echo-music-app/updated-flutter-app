@@ -12,6 +12,7 @@ MusicSearchResultGroup _emptyGroup(String query) => MusicSearchResultGroup(
   tracks: const [],
   albums: const [],
   artists: const [],
+  users: const [],
   summary: const MusicSearchSummary(
     totalCount: 0,
     perTypeCounts: {},

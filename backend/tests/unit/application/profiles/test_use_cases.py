@@ -83,9 +83,12 @@ def _make_public_profile(user_id: uuid.UUID | None = None) -> PublicUserProfile:
     return PublicUserProfile(
         id=user_id or uuid.uuid4(),
         username="alice",
+        avatar_path=None,
         bio="Producer",
         preferred_genres=["house"],
         is_artist=True,
+        followers_count=0,
+        following_count=0,
         created_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
     )
 
@@ -127,10 +130,13 @@ def _make_me_profile(user_id: uuid.UUID | None = None) -> MeProfile:
         id=uid,
         email="alice@example.com",
         username="alice",
+        avatar_path=None,
         bio="Producer",
         preferred_genres=["house"],
         status="active",
         is_artist=True,
+        followers_count=0,
+        following_count=0,
         created_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
         updated_at=datetime.datetime(2026, 1, 2, tzinfo=datetime.UTC),
     )

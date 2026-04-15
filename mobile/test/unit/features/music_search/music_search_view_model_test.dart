@@ -28,6 +28,7 @@ MusicSearchResultGroup _group({
   tracks: tracks,
   albums: albums,
   artists: artists,
+  users: const [],
   summary: _summary(total: tracks.length + albums.length + artists.length),
 );
 

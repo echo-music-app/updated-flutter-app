@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/routing/routes.dart';
@@ -21,6 +22,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
+  static const _rememberEmailKey = 'remember_me_email';
+  static const _rememberPasswordKey = 'remember_me_password';
   static const _bgTop = Color(0xFF0B1222);
   static const _bgBottom = Color(0xFF050912);
   static const _cardBg = Color(0xFF05070B);
@@ -38,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _confirmPasswordController = TextEditingController();
   final _verificationCodeController = TextEditingController();
   final _mfaCodeController = TextEditingController();
+  final _secureStorage = const FlutterSecureStorage();
 
   late final AnimationController _entryController;
   late final Animation<double> _fadeIn;
@@ -48,17 +52,25 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLightMode = false;
+  bool _rememberMe = false;
 
   Color get _bgTopColor => _isLightMode ? const Color(0xFFF7F9FC) : _bgTop;
-  Color get _bgBottomColor => _isLightMode ? const Color(0xFFEFF3FA) : _bgBottom;
+  Color get _bgBottomColor =>
+      _isLightMode ? const Color(0xFFEFF3FA) : _bgBottom;
   Color get _cardBgColor => _isLightMode ? Colors.white : _cardBg;
-  Color get _cardBorderColor => _isLightMode ? const Color(0xFFDCE4F0) : _cardBorder;
+  Color get _cardBorderColor =>
+      _isLightMode ? const Color(0xFFDCE4F0) : _cardBorder;
   Color get _fieldBgColor => _isLightMode ? const Color(0xFFF5F7FB) : _fieldBg;
-  Color get _fieldBorderColor => _isLightMode ? const Color(0xFFD8E0EC) : _fieldBorder;
-  Color get _textPrimaryColor => _isLightMode ? const Color(0xFF111827) : Colors.white;
-  Color get _textMutedColor => _isLightMode ? const Color(0xFF5B6678) : _textMuted;
-  Color get _themeChipBg => _isLightMode ? const Color(0xFFF3F6FC) : const Color(0xAA0D1118);
-  Color get _themeChipBorder => _isLightMode ? const Color(0xFFD7DFEB) : const Color(0xFF2D3A52);
+  Color get _fieldBorderColor =>
+      _isLightMode ? const Color(0xFFD8E0EC) : _fieldBorder;
+  Color get _textPrimaryColor =>
+      _isLightMode ? const Color(0xFF111827) : Colors.white;
+  Color get _textMutedColor =>
+      _isLightMode ? const Color(0xFF5B6678) : _textMuted;
+  Color get _themeChipBg =>
+      _isLightMode ? const Color(0xFFF3F6FC) : const Color(0xAA0D1118);
+  Color get _themeChipBorder =>
+      _isLightMode ? const Color(0xFFD7DFEB) : const Color(0xFF2D3A52);
 
   @override
   void initState() {
@@ -71,13 +83,12 @@ class _LoginScreenState extends State<LoginScreen>
       parent: _entryController,
       curve: Curves.easeOutCubic,
     );
-    _slideIn = Tween<Offset>(
-      begin: const Offset(0, 0.07),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
-    );
+    _slideIn = Tween<Offset>(begin: const Offset(0, 0.07), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
+        );
     _entryController.forward();
+    _loadRememberedCredentials();
   }
 
   @override
@@ -109,6 +120,9 @@ class _LoginScreenState extends State<LoginScreen>
             ? null
             : _mfaCodeController.text.trim(),
       );
+      if (widget.viewModel.isAuthenticated) {
+        await _syncRememberedCredentials();
+      }
     } else {
       await widget.viewModel.register(
         _emailController.text.trim(),
@@ -123,6 +137,34 @@ class _LoginScreenState extends State<LoginScreen>
       _emailController.text.trim(),
       _verificationCodeController.text.trim(),
     );
+  }
+
+  Future<void> _loadRememberedCredentials() async {
+    final savedEmail = await _secureStorage.read(key: _rememberEmailKey);
+    final savedPassword = await _secureStorage.read(key: _rememberPasswordKey);
+    if (!mounted) return;
+    if (savedEmail == null || savedPassword == null) return;
+    setState(() {
+      _rememberMe = true;
+      _emailController.text = savedEmail;
+      _passwordController.text = savedPassword;
+    });
+  }
+
+  Future<void> _syncRememberedCredentials() async {
+    if (_rememberMe) {
+      await _secureStorage.write(
+        key: _rememberEmailKey,
+        value: _emailController.text.trim(),
+      );
+      await _secureStorage.write(
+        key: _rememberPasswordKey,
+        value: _passwordController.text,
+      );
+      return;
+    }
+    await _secureStorage.delete(key: _rememberEmailKey);
+    await _secureStorage.delete(key: _rememberPasswordKey);
   }
 
   @override
@@ -176,7 +218,9 @@ class _LoginScreenState extends State<LoginScreen>
                   height: 230,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _purpleStart.withValues(alpha: _isLightMode ? 0.10 : 0.16),
+                    color: _purpleStart.withValues(
+                      alpha: _isLightMode ? 0.10 : 0.16,
+                    ),
                   ),
                 ),
               ),
@@ -209,7 +253,15 @@ class _LoginScreenState extends State<LoginScreen>
                         child: ListenableBuilder(
                           listenable: widget.viewModel,
                           builder: (context, _) {
-                            final pending = widget.viewModel.pendingVerification;
+                            if (widget.viewModel.isAuthenticated) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!mounted) return;
+                                context.go(Routes.home);
+                              });
+                            }
+
+                            final pending =
+                                widget.viewModel.pendingVerification;
                             if (pending == null) {
                               _lastPendingEmail = null;
                             } else if (_lastPendingEmail != pending.email) {
@@ -229,7 +281,8 @@ class _LoginScreenState extends State<LoginScreen>
                                   key: ValueKey(
                                     '$_isLogin-${pending != null}-${widget.viewModel.mfaRequired}',
                                   ),
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Align(
@@ -237,8 +290,12 @@ class _LoginScreenState extends State<LoginScreen>
                                       child: DecoratedBox(
                                         decoration: BoxDecoration(
                                           color: _themeChipBg,
-                                          borderRadius: BorderRadius.circular(999),
-                                          border: Border.all(color: _themeChipBorder),
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
+                                          border: Border.all(
+                                            color: _themeChipBorder,
+                                          ),
                                         ),
                                         child: IconButton(
                                           icon: Icon(
@@ -250,14 +307,18 @@ class _LoginScreenState extends State<LoginScreen>
                                           tooltip: isDarkMode
                                               ? 'Switch to light mode'
                                               : 'Switch to dark mode',
-                                          onPressed: () => themeController.toggle(),
+                                          onPressed: () =>
+                                              themeController.toggle(),
                                         ),
                                       ),
                                     ),
                                     _buildHeader(_isLogin),
                                     SizedBox(height: AppSpacing.lg),
                                     if (pending != null) ...[
-                                      _buildPendingCard(pending.message, pending.debugCode),
+                                      _buildPendingCard(
+                                        pending.message,
+                                        pending.debugCode,
+                                      ),
                                       SizedBox(height: AppSpacing.md),
                                       SizedBox(
                                         height: 48,
@@ -267,7 +328,9 @@ class _LoginScreenState extends State<LoginScreen>
                                               : () => context.go(
                                                   '${Routes.verifyEmail}?email=${Uri.encodeComponent(pending.email)}',
                                                 ),
-                                          child: const Text('Open verification screen'),
+                                          child: const Text(
+                                            'Open verification screen',
+                                          ),
                                         ),
                                       ),
                                       SizedBox(height: AppSpacing.md),
@@ -280,13 +343,16 @@ class _LoginScreenState extends State<LoginScreen>
                                     _emailField(),
                                     SizedBox(height: AppSpacing.md),
                                     AnimatedCrossFade(
-                                      duration: const Duration(milliseconds: 220),
+                                      duration: const Duration(
+                                        milliseconds: 220,
+                                      ),
                                       crossFadeState: _isLogin
                                           ? CrossFadeState.showFirst
                                           : CrossFadeState.showSecond,
                                       firstChild: const SizedBox.shrink(),
                                       secondChild: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
                                         children: [
                                           _label(l10n.username),
                                           _usernameField(),
@@ -297,7 +363,9 @@ class _LoginScreenState extends State<LoginScreen>
                                     _label(l10n.password),
                                     _passwordField(),
                                     AnimatedCrossFade(
-                                      duration: const Duration(milliseconds: 220),
+                                      duration: const Duration(
+                                        milliseconds: 220,
+                                      ),
                                       crossFadeState: _isLogin
                                           ? CrossFadeState.showFirst
                                           : CrossFadeState.showSecond,
@@ -313,13 +381,16 @@ class _LoginScreenState extends State<LoginScreen>
                                       ),
                                     ),
                                     AnimatedCrossFade(
-                                      duration: const Duration(milliseconds: 220),
+                                      duration: const Duration(
+                                        milliseconds: 220,
+                                      ),
                                       crossFadeState: _isLogin
                                           ? CrossFadeState.showFirst
                                           : CrossFadeState.showSecond,
                                       firstChild: const SizedBox.shrink(),
                                       secondChild: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
                                         children: [
                                           SizedBox(height: AppSpacing.md),
                                           _label('Confirm Password'),
@@ -329,10 +400,41 @@ class _LoginScreenState extends State<LoginScreen>
                                         ],
                                       ),
                                     ),
-                                    if (_isLogin && pending == null && widget.viewModel.mfaRequired) ...[
+                                    if (_isLogin &&
+                                        pending == null &&
+                                        widget.viewModel.mfaRequired) ...[
                                       SizedBox(height: AppSpacing.md),
                                       _label('2FA Code'),
                                       _mfaField(),
+                                    ],
+                                    if (_isLogin && pending == null) ...[
+                                      SizedBox(height: AppSpacing.sm),
+                                      CheckboxListTile(
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        controlAffinity:
+                                            ListTileControlAffinity.leading,
+                                        activeColor: _purpleStart,
+                                        value: _rememberMe,
+                                        onChanged: widget.viewModel.isLoading
+                                            ? null
+                                            : (value) async {
+                                                final next = value ?? false;
+                                                setState(
+                                                  () => _rememberMe = next,
+                                                );
+                                                if (!next) {
+                                                  await _syncRememberedCredentials();
+                                                }
+                                              },
+                                        title: Text(
+                                          'Remember me',
+                                          style: TextStyle(
+                                            color: _textPrimaryColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                     if (pending != null) ...[
                                       SizedBox(height: AppSpacing.md),
@@ -341,8 +443,12 @@ class _LoginScreenState extends State<LoginScreen>
                                         controller: _verificationCodeController,
                                         keyboardType: TextInputType.number,
                                         enabled: !widget.viewModel.isLoading,
-                                        style: TextStyle(color: _textPrimaryColor),
-                                        decoration: _fieldDecoration(hintText: '123456'),
+                                        style: TextStyle(
+                                          color: _textPrimaryColor,
+                                        ),
+                                        decoration: _fieldDecoration(
+                                          hintText: '123456',
+                                        ),
                                       ),
                                     ],
                                     SizedBox(height: AppSpacing.lg),
@@ -356,9 +462,11 @@ class _LoginScreenState extends State<LoginScreen>
                                       TextButton(
                                         onPressed: widget.viewModel.isLoading
                                             ? null
-                                            : () => widget.viewModel.resendVerificationCode(
-                                                  _emailController.text.trim(),
-                                                ),
+                                            : () => widget.viewModel
+                                                  .resendVerificationCode(
+                                                    _emailController.text
+                                                        .trim(),
+                                                  ),
                                         child: const Text('Resend code'),
                                       ),
                                     ],
@@ -391,7 +499,8 @@ class _LoginScreenState extends State<LoginScreen>
           tween: Tween(begin: 0.92, end: 1),
           duration: const Duration(milliseconds: 900),
           curve: Curves.easeOutBack,
-          builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+          builder: (_, scale, child) =>
+              Transform.scale(scale: scale, child: child),
           child: Container(
             height: 76,
             width: 76,
@@ -403,7 +512,11 @@ class _LoginScreenState extends State<LoginScreen>
                 colors: [_purpleStart, _purpleEnd],
               ),
             ),
-            child: const Icon(Icons.music_note_rounded, color: Colors.white, size: 34),
+            child: const Icon(
+              Icons.music_note_rounded,
+              color: Colors.white,
+              size: 34,
+            ),
           ),
         ),
         SizedBox(height: AppSpacing.md),
@@ -479,8 +592,12 @@ class _LoginScreenState extends State<LoginScreen>
       style: TextStyle(color: _textPrimaryColor),
       decoration: _fieldDecoration(hintText: 'your_username'),
       validator: (value) {
-        if (_isLogin) return null;
-        if (value == null || value.trim().isEmpty) return 'Username is required';
+        if (_isLogin) {
+          return null;
+        }
+        if (value == null || value.trim().isEmpty) {
+          return 'Username is required';
+        }
         if (value.trim().length < 3 || value.trim().length > 50) {
           return 'Username must be 3-50 characters';
         }
@@ -506,7 +623,9 @@ class _LoginScreenState extends State<LoginScreen>
               ? null
               : () => setState(() => _obscurePassword = !_obscurePassword),
           icon: Icon(
-            _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+            _obscurePassword
+                ? Icons.visibility_off_rounded
+                : Icons.visibility_rounded,
             color: _obscurePassword
                 ? const Color(0xFF9BA7BA)
                 : const Color(0xFF7C3AED),
@@ -558,8 +677,8 @@ class _LoginScreenState extends State<LoginScreen>
           onPressed: widget.viewModel.isLoading
               ? null
               : () => setState(
-                    () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                  ),
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
           icon: Icon(
             _obscureConfirmPassword
                 ? Icons.visibility_off_rounded
@@ -611,11 +730,15 @@ class _LoginScreenState extends State<LoginScreen>
     return SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: widget.viewModel.isLoading ? null : (hasPending ? _verifyEmail : _submit),
+        onPressed: widget.viewModel.isLoading
+            ? null
+            : (hasPending ? _verifyEmail : _submit),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: const Color(0xFF111827),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
         ),
         child: widget.viewModel.isLoading
@@ -624,7 +747,11 @@ class _LoginScreenState extends State<LoginScreen>
                 width: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Text(hasPending ? 'Verify Email' : (_isLogin ? 'Sign In' : l10n.register)),
+            : Text(
+                hasPending
+                    ? 'Verify Email'
+                    : (_isLogin ? 'Sign In' : l10n.register),
+              ),
       ),
     );
   }
@@ -633,7 +760,9 @@ class _LoginScreenState extends State<LoginScreen>
     return SizedBox(
       height: 52,
       child: OutlinedButton.icon(
-        onPressed: widget.viewModel.isLoading ? null : widget.viewModel.loginWithGoogle,
+        onPressed: widget.viewModel.isLoading
+            ? null
+            : widget.viewModel.loginWithGoogle,
         icon: const Icon(Icons.g_mobiledata_rounded),
         label: Text(_isLogin ? 'Sign in with Google' : 'Sign up with Google'),
         style: OutlinedButton.styleFrom(
@@ -644,7 +773,9 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           foregroundColor: _textPrimaryColor,
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
@@ -658,7 +789,9 @@ class _LoginScreenState extends State<LoginScreen>
           style: TextStyle(color: _textMutedColor, fontSize: 16),
           children: [
             TextSpan(
-              text: _isLogin ? 'Don\'t have an account? ' : 'Already have an account? ',
+              text: _isLogin
+                  ? 'Don\'t have an account? '
+                  : 'Already have an account? ',
             ),
             TextSpan(
               text: _isLogin ? 'Sign up' : 'Sign in',
@@ -681,7 +814,9 @@ class _LoginScreenState extends State<LoginScreen>
         color: _isLightMode ? const Color(0xFFF3F7FF) : const Color(0xFF131C2A),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _isLightMode ? const Color(0xFFD5E1F2) : const Color(0xFF22314A),
+          color: _isLightMode
+              ? const Color(0xFFD5E1F2)
+              : const Color(0xFF22314A),
         ),
       ),
       child: Text(

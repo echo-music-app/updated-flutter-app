@@ -61,6 +61,16 @@ class _FakeProfileRepository implements ProfileRepository {
   Future<ProfileHeader> uploadOwnAvatar(String filePath) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<FollowRelationStatus> getFollowStatus(String userId) async =>
+      FollowRelationStatus.none;
+
+  @override
+  Future<void> sendFollowRequest(String userId) async {}
+
+  @override
+  Future<void> acceptFollowRequest(String userId) async {}
 }
 
 ProfileHeader _header(String id) =>
@@ -267,4 +277,14 @@ class _CapturingRepository implements ProfileRepository {
   Future<ProfileHeader> uploadOwnAvatar(String filePath) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<FollowRelationStatus> getFollowStatus(String userId) async =>
+      FollowRelationStatus.none;
+
+  @override
+  Future<void> sendFollowRequest(String userId) async {}
+
+  @override
+  Future<void> acceptFollowRequest(String userId) async {}
 }

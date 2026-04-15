@@ -20,6 +20,8 @@ router = APIRouter(tags=["posts"])
 
 class CreatePostRequest(BaseModel):
     privacy: str = Field(..., examples=["Public"])
+    text: str | None = Field(default=None, examples=["Sharing a new track today"])
+    spotify_url: str | None = Field(default=None, examples=["https://open.spotify.com/track/xyz"])
 
 
 class AttachmentResponse(BaseModel):
@@ -108,7 +110,12 @@ async def create_post(
 ):
     use_case = CreatePostUseCase(SqlAlchemyPostRepository(db))
     try:
-        created = await use_case.execute(user_id=current_user.id, privacy=body.privacy)
+        created = await use_case.execute(
+            user_id=current_user.id,
+            privacy=body.privacy,
+            text=body.text,
+            spotify_url=body.spotify_url,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

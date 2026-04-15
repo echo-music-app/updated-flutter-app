@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/profile_view/data/repositories/echo_profile_repository.dart';
+import 'package:mobile/features/profile_view/domain/entities/profile.dart';
 import 'package:mobile/features/profile_view/domain/ports/profile_repository.dart';
 
 // --- Minimal Dio mock ---
@@ -176,6 +177,37 @@ void main() {
       expect(
         () => repo.getUserPosts('bad-id'),
         throwsA(isA<ProfileNotFoundException>()),
+      );
+    });
+  });
+
+  group('EchoProfileRepository - follow/status', () {
+    test('getFollowStatus maps accepted status', () async {
+      final repo = _repo((_) async => _json('{"status":"accepted"}', 200));
+      final status = await repo.getFollowStatus('uid-2');
+      expect(status, FollowRelationStatus.accepted);
+    });
+
+    test('sendFollowRequest succeeds on 200', () async {
+      final repo = _repo(
+        (_) async => _json('{"status":"pending_outgoing"}', 200),
+      );
+      await repo.sendFollowRequest('uid-2');
+    });
+
+    test('sendFollowRequest 401 throws ProfileAuthException', () async {
+      final repo = _repo((_) async => _json('{}', 401));
+      expect(
+        () => repo.sendFollowRequest('uid-2'),
+        throwsA(isA<ProfileAuthException>()),
+      );
+    });
+
+    test('acceptFollowRequest 401 throws ProfileAuthException', () async {
+      final repo = _repo((_) async => _json('{}', 401));
+      expect(
+        () => repo.acceptFollowRequest('uid-2'),
+        throwsA(isA<ProfileAuthException>()),
       );
     });
   });
