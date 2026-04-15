@@ -2,8 +2,8 @@ import uuid
 from datetime import datetime
 
 import uuid6
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.infrastructure.persistence.models.user import User, UserStatus

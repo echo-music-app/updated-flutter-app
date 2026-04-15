@@ -27,9 +27,7 @@ class SqlAlchemyFriendRepository(IFriendRepository):
             return "self"
 
         user1_id, user2_id = self._ordered_pair(user_id, target_user_id)
-        stmt = select(Friend).where(
-            and_(Friend.user1_id == user1_id, Friend.user2_id == user2_id)
-        )
+        stmt = select(Friend).where(and_(Friend.user1_id == user1_id, Friend.user2_id == user2_id))
         relationship = (await self._session.execute(stmt)).scalar_one_or_none()
         if relationship is None:
             return "none"
@@ -38,11 +36,7 @@ class SqlAlchemyFriendRepository(IFriendRepository):
         if relationship.status == FriendStatus.pending:
             if relationship.requested_by_id is None:
                 return "pending_outgoing"
-            return (
-                "pending_outgoing"
-                if relationship.requested_by_id == user_id
-                else "pending_incoming"
-            )
+            return "pending_outgoing" if relationship.requested_by_id == user_id else "pending_incoming"
         return "none"
 
     async def send_follow_request(
@@ -54,9 +48,7 @@ class SqlAlchemyFriendRepository(IFriendRepository):
             raise ValueError("Cannot follow yourself")
 
         user1_id, user2_id = self._ordered_pair(user_id, target_user_id)
-        stmt = select(Friend).where(
-            and_(Friend.user1_id == user1_id, Friend.user2_id == user2_id)
-        )
+        stmt = select(Friend).where(and_(Friend.user1_id == user1_id, Friend.user2_id == user2_id))
         relationship = (await self._session.execute(stmt)).scalar_one_or_none()
 
         if relationship is None:
@@ -95,9 +87,7 @@ class SqlAlchemyFriendRepository(IFriendRepository):
             raise ValueError("Cannot accept your own request")
 
         user1_id, user2_id = self._ordered_pair(user_id, target_user_id)
-        stmt = select(Friend).where(
-            and_(Friend.user1_id == user1_id, Friend.user2_id == user2_id)
-        )
+        stmt = select(Friend).where(and_(Friend.user1_id == user1_id, Friend.user2_id == user2_id))
         relationship = (await self._session.execute(stmt)).scalar_one_or_none()
         if relationship is None:
             raise ValueError("No follow request found")

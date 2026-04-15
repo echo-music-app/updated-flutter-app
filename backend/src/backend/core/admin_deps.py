@@ -17,7 +17,6 @@ from backend.infrastructure.persistence.models.admin import AdminAccount
 from backend.infrastructure.persistence.models.admin_auth import AdminAccessToken
 from backend.infrastructure.persistence.models.auth import AccessToken
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 

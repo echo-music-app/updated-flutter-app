@@ -23,9 +23,7 @@ class SqlAlchemyProfileRepository:
         user = result.scalar_one_or_none()
         if user is None:
             return None
-        followers_count, following_count = await SqlAlchemyFriendRepository(
-            self._session
-        ).get_follower_following_counts(user.id)
+        followers_count, following_count = await SqlAlchemyFriendRepository(self._session).get_follower_following_counts(user.id)
         return PublicUserProfile(
             id=user.id,
             username=user.username,
@@ -77,9 +75,7 @@ class SqlAlchemyProfileRepository:
         user = result.scalar_one_or_none()
         if user is None:
             return None
-        followers_count, following_count = await SqlAlchemyFriendRepository(
-            self._session
-        ).get_follower_following_counts(user.id)
+        followers_count, following_count = await SqlAlchemyFriendRepository(self._session).get_follower_following_counts(user.id)
         return _user_to_me_profile(user, followers_count, following_count)
 
     async def update_me(
@@ -109,9 +105,7 @@ class SqlAlchemyProfileRepository:
             raise UsernameConflictError("Username already taken") from exc
 
         await self._session.refresh(user)
-        followers_count, following_count = await SqlAlchemyFriendRepository(
-            self._session
-        ).get_follower_following_counts(user.id)
+        followers_count, following_count = await SqlAlchemyFriendRepository(self._session).get_follower_following_counts(user.id)
         return _user_to_me_profile(user, followers_count, following_count)
 
     async def update_me_avatar(
@@ -128,9 +122,7 @@ class SqlAlchemyProfileRepository:
         user.avatar_path = avatar_path
         await self._session.flush()
         await self._session.refresh(user)
-        followers_count, following_count = await SqlAlchemyFriendRepository(
-            self._session
-        ).get_follower_following_counts(user.id)
+        followers_count, following_count = await SqlAlchemyFriendRepository(self._session).get_follower_following_counts(user.id)
         return _user_to_me_profile(user, followers_count, following_count)
 
 
