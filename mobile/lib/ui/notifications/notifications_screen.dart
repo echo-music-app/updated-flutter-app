@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
-import 'package:mobile/ui/core/widgets/app_sidebar_drawer.dart';
+import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
 import 'package:mobile/ui/notifications/notifications_view_model.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -25,11 +25,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded),
-          tooltip: 'Open menu',
-          onPressed: () => showAppSidebar(context),
-        ),
+        leading: const AppTopNavLeading(),
         title: const Text('Notifications'),
       ),
       body: ListenableBuilder(

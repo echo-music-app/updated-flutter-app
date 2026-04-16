@@ -18,6 +18,7 @@ class ProfileViewState {
     this.header,
     this.postsState = PostsLoadState.loading,
     this.posts = const [],
+    this.totalPostsCount = 0,
     this.isLoadingMore = false,
     this.canLoadMore = false,
     this.isSavingBio = false,
@@ -32,6 +33,7 @@ class ProfileViewState {
   final ProfileHeader? header;
   final PostsLoadState postsState;
   final List<ProfilePostSummary> posts;
+  final int totalPostsCount;
   final bool isLoadingMore;
   final bool canLoadMore;
   final bool isSavingBio;
@@ -47,6 +49,7 @@ class ProfileViewState {
     bool clearHeader = false,
     PostsLoadState? postsState,
     List<ProfilePostSummary>? posts,
+    int? totalPostsCount,
     bool? isLoadingMore,
     bool? canLoadMore,
     bool? isSavingBio,
@@ -62,6 +65,7 @@ class ProfileViewState {
       header: clearHeader ? null : (header ?? this.header),
       postsState: postsState ?? this.postsState,
       posts: posts ?? this.posts,
+      totalPostsCount: totalPostsCount ?? this.totalPostsCount,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       canLoadMore: canLoadMore ?? this.canLoadMore,
       isSavingBio: isSavingBio ?? this.isSavingBio,
@@ -200,6 +204,7 @@ class ProfileViewModel extends ChangeNotifier {
         _state.copyWith(
           postsState: postsState,
           posts: page.items,
+          totalPostsCount: page.count,
           canLoadMore: page.nextCursor != null,
         ),
       );
@@ -208,6 +213,7 @@ class ProfileViewModel extends ChangeNotifier {
         _state.copyWith(
           postsState: PostsLoadState.authRequired,
           posts: [],
+          totalPostsCount: 0,
           canLoadMore: false,
         ),
       );
@@ -216,6 +222,7 @@ class ProfileViewModel extends ChangeNotifier {
         _state.copyWith(
           postsState: PostsLoadState.error,
           posts: [],
+          totalPostsCount: 0,
           canLoadMore: false,
         ),
       );

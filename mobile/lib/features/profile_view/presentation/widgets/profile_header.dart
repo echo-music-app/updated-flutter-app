@@ -8,16 +8,22 @@ class ProfileHeaderWidget extends StatelessWidget {
   const ProfileHeaderWidget({
     super.key,
     required this.header,
+    required this.postsCount,
     this.localAvatarPath,
     this.onEditBio,
     this.onEditPhoto,
+    this.onTapFollowers,
+    this.onTapFollowing,
     this.canEdit = false,
   });
 
   final ProfileHeader header;
+  final int postsCount;
   final String? localAvatarPath;
   final VoidCallback? onEditBio;
   final VoidCallback? onEditPhoto;
+  final VoidCallback? onTapFollowers;
+  final VoidCallback? onTapFollowing;
   final bool canEdit;
 
   @override
@@ -158,9 +164,17 @@ class ProfileHeaderWidget extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _StatItem(label: 'Posts', value: _estimatedPostsCount),
-                  _StatItem(label: 'Followers', value: header.followersCount),
-                  _StatItem(label: 'Following', value: header.followingCount),
+                  _StatItem(label: 'Posts', value: postsCount),
+                  _StatItem(
+                    label: 'Followers',
+                    value: header.followersCount,
+                    onTap: onTapFollowers,
+                  ),
+                  _StatItem(
+                    label: 'Following',
+                    value: header.followingCount,
+                    onTap: onTapFollowing,
+                  ),
                 ],
               ),
             ],
@@ -210,8 +224,6 @@ class ProfileHeaderWidget extends StatelessWidget {
     );
   }
 
-  int get _estimatedPostsCount => 0;
-
   ImageProvider<Object>? _profileImageProvider() {
     final path = localAvatarPath;
     if (path != null && path.isNotEmpty) {
@@ -231,31 +243,41 @@ class ProfileHeaderWidget extends StatelessWidget {
 }
 
 class _StatItem extends StatelessWidget {
-  const _StatItem({required this.label, required this.value});
+  const _StatItem({required this.label, required this.value, this.onTap});
 
   final String label;
   final int value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final isLight = Theme.of(context).brightness == Brightness.light;
-    return Column(
-      children: [
-        Text(
-          _comma(value),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w800,
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          children: [
+            Text(
+              _comma(value),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isLight
+                    ? const Color(0xFF5F6C80)
+                    : const Color(0xFFAAB3C4),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isLight ? const Color(0xFF5F6C80) : const Color(0xFFAAB3C4),
-          ),
-        ),
-      ],
+      ),
     );
   }
 

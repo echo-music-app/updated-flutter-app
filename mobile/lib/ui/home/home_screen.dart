@@ -5,7 +5,7 @@ import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
-import 'package:mobile/ui/core/widgets/app_sidebar_drawer.dart';
+import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, required this.viewModel});
@@ -18,17 +18,13 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded),
-          tooltip: 'Open menu',
-          onPressed: () => showAppSidebar(context),
-        ),
+        leading: const AppTopNavLeading(),
         title: const Text('Feed'),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             tooltip: 'Notifications',
-            onPressed: () => context.go(Routes.notifications),
+            onPressed: () => context.push(Routes.notifications),
           ),
         ],
       ),
@@ -91,7 +87,7 @@ class _FeedPostCard extends StatelessWidget {
   final HomeFeedPost post;
 
   void _openAuthorProfile(BuildContext context) {
-    context.go('${Routes.profile}/${Uri.encodeComponent(post.userId)}');
+    context.push('${Routes.profile}/${Uri.encodeComponent(post.userId)}');
   }
 
   @override

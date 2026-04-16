@@ -30,10 +30,26 @@ async def test_list_incoming_requests_requires_auth(async_client_no_db: AsyncCli
 
 
 @pytest.mark.anyio
+async def test_list_friends_requires_auth(async_client_no_db: AsyncClient):
+    response = await async_client_no_db.get("/v1/friends")
+    assert response.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_list_followers_and_following_require_auth(async_client_no_db: AsyncClient):
+    followers = await async_client_no_db.get("/v1/friends/followers")
+    following = await async_client_no_db.get("/v1/friends/following")
+    assert followers.status_code == 401
+    assert following.status_code == 401
+
+
+@pytest.mark.anyio
 async def test_follow_request_accept_and_status(async_client: AsyncClient):
     token_a = await _register(async_client, "friends_a@example.com", "friends_a")
     token_b = await _register(async_client, "friends_b@example.com", "friends_b")
 
+    me_a = await async_client.get("/v1/me", headers={"Authorization": f"Bearer {token_a}"})
+    user_a_id = me_a.json()["id"]
     me_b = await async_client.get("/v1/me", headers={"Authorization": f"Bearer {token_b}"})
     target_id = me_b.json()["id"]
 
@@ -66,3 +82,27 @@ async def test_follow_request_accept_and_status(async_client: AsyncClient):
     assert status_after_accept.json()["status"] == "accepted"
     assert status_after_accept.json()["is_following"] is True
     assert status_resp.json()["is_following"] is True
+
+    friends_resp = await async_client.get(
+        "/v1/friends",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert friends_resp.status_code == 200
+    assert any(
+        item["user_id"] == target_id and item["username"] == "friends_b"
+        for item in friends_resp.json()
+    )
+
+    following_resp = await async_client.get(
+        "/v1/friends/following",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert following_resp.status_code == 200
+    assert any(item["user_id"] == target_id for item in following_resp.json())
+
+    followers_resp = await async_client.get(
+        "/v1/friends/followers",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert followers_resp.status_code == 200
+    assert any(item["user_id"] == user_a_id for item in followers_resp.json())

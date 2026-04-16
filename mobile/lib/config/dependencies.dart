@@ -11,6 +11,8 @@ import 'package:mobile/features/music_search/domain/ports/music_search_repositor
 import 'package:mobile/features/profile_view/data/repositories/echo_profile_repository.dart';
 import 'package:mobile/features/profile_view/domain/ports/profile_repository.dart';
 import 'package:mobile/ui/core/themes/theme_mode_controller.dart';
+import 'package:mobile/ui/messages/echo_messages_repository.dart';
+import 'package:mobile/ui/messages/message_badge_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -73,6 +75,21 @@ List<SingleChildWidget> get providersLocal => [
       getAccessToken: auth.getAccessToken,
       refreshAccessToken: auth.refreshAccessToken,
     ),
+  ),
+  ChangeNotifierProxyProvider<AuthRepository, MessageBadgeController>(
+    create: (_) => MessageBadgeController(),
+    update: (_, auth, controller) {
+      final current = controller ?? MessageBadgeController();
+      current.configure(
+        isAuthenticated: auth.isAuthenticated,
+        repository: EchoMessagesRepository(
+          echoBaseUrl: _echoBaseUrl,
+          getAccessToken: auth.getAccessToken,
+          refreshAccessToken: auth.refreshAccessToken,
+        ),
+      );
+      return current;
+    },
   ),
 ];
 

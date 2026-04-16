@@ -29,6 +29,18 @@ class IncomingFollowRequestResponse(BaseModel):
     requested_at: datetime
 
 
+class FriendSummaryResponse(BaseModel):
+    user_id: uuid.UUID
+    username: str
+    avatar_url: str | None
+
+
+def _avatar_url(user_id: uuid.UUID, avatar_path: str | None) -> str | None:
+    if not avatar_path:
+        return None
+    return f"/v1/users/{user_id}/avatar"
+
+
 @router.get("/requests/incoming", response_model=list[IncomingFollowRequestResponse])
 async def list_incoming_follow_requests(
     current_user: User = Depends(get_current_user),
@@ -43,6 +55,57 @@ async def list_incoming_follow_requests(
             requested_at=requested_at,
         )
         for requester_id, username, requested_at in requests
+    ]
+
+
+@router.get("", response_model=list[FriendSummaryResponse])
+async def list_friends(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    repo = SqlAlchemyFriendRepository(db)
+    friends = await repo.list_accepted_friends(current_user.id)
+    return [
+        FriendSummaryResponse(
+            user_id=friend_id,
+            username=username,
+            avatar_url=_avatar_url(friend_id, avatar_path),
+        )
+        for friend_id, username, avatar_path in friends
+    ]
+
+
+@router.get("/followers", response_model=list[FriendSummaryResponse])
+async def list_followers(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    repo = SqlAlchemyFriendRepository(db)
+    followers = await repo.list_followers(current_user.id)
+    return [
+        FriendSummaryResponse(
+            user_id=user_id,
+            username=username,
+            avatar_url=_avatar_url(user_id, avatar_path),
+        )
+        for user_id, username, avatar_path in followers
+    ]
+
+
+@router.get("/following", response_model=list[FriendSummaryResponse])
+async def list_following(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    repo = SqlAlchemyFriendRepository(db)
+    following = await repo.list_following(current_user.id)
+    return [
+        FriendSummaryResponse(
+            user_id=user_id,
+            username=username,
+            avatar_url=_avatar_url(user_id, avatar_path),
+        )
+        for user_id, username, avatar_path in following
     ]
 
 

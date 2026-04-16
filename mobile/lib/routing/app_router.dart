@@ -21,9 +21,16 @@ import 'package:mobile/features/profile_view/presentation/profile_view_model.dar
 import 'package:mobile/ui/home/echo_home_feed_repository.dart';
 import 'package:mobile/ui/home/home_screen.dart';
 import 'package:mobile/ui/home/home_view_model.dart';
+import 'package:mobile/ui/friends/echo_friends_repository.dart';
+import 'package:mobile/ui/friends/friends_repository.dart';
+import 'package:mobile/ui/friends/friends_screen.dart';
+import 'package:mobile/ui/friends/friends_view_model.dart';
 import 'package:mobile/ui/login/login_view_model.dart';
 import 'package:mobile/ui/login/login_screen.dart';
 import 'package:mobile/ui/login/verify_email_screen.dart';
+import 'package:mobile/ui/messages/echo_messages_repository.dart';
+import 'package:mobile/ui/messages/messages_screen.dart';
+import 'package:mobile/ui/messages/messages_view_model.dart';
 import 'package:mobile/ui/player/player_screen.dart';
 import 'package:mobile/ui/player/player_view_model.dart';
 import 'package:mobile/ui/player_webview/player_webview_screen.dart';
@@ -95,6 +102,41 @@ GoRouter appRouter(AuthRepository authRepository) => GoRouter(
       ),
     ),
     GoRoute(
+      path: Routes.friendsFollowers,
+      builder: (ctx, _) => FriendsScreen(
+        viewModel: _buildFriendsViewModel(
+          ctx,
+          authRepository,
+          FriendListType.followers,
+        ),
+        listType: FriendListType.followers,
+      ),
+    ),
+    GoRoute(
+      path: Routes.friendsFollowing,
+      builder: (ctx, _) => FriendsScreen(
+        viewModel: _buildFriendsViewModel(
+          ctx,
+          authRepository,
+          FriendListType.following,
+        ),
+        listType: FriendListType.following,
+      ),
+    ),
+    GoRoute(
+      path: Routes.messages,
+      builder: (ctx, _) => MessagesScreen(
+        viewModel: _buildMessagesViewModel(ctx, authRepository),
+      ),
+    ),
+    GoRoute(
+      path: Routes.messagesUser,
+      builder: (ctx, routeState) => MessagesScreen(
+        viewModel: _buildMessagesViewModel(ctx, authRepository),
+        userId: routeState.pathParameters['userId'],
+      ),
+    ),
+    GoRoute(
       path: Routes.notifications,
       builder: (ctx, _) => NotificationsScreen(
         viewModel: _buildNotificationsViewModel(ctx, authRepository),
@@ -136,6 +178,38 @@ LoginViewModel _buildLoginViewModel(BuildContext ctx) {
   return LoginViewModel(
     authRepository: ctx.read<AuthRepository>(),
     spotifyAuthRepository: ctx.read<SpotifyAuthRepositoryInterface>(),
+  );
+}
+
+FriendsViewModel _buildFriendsViewModel(
+  BuildContext ctx,
+  AuthRepository authRepository,
+  FriendListType listType,
+) {
+  final repo = EchoFriendsRepository(
+    echoBaseUrl: _echoBaseUrl,
+    getAccessToken: authRepository.getAccessToken,
+    refreshAccessToken: authRepository.refreshAccessToken,
+  );
+  return FriendsViewModel(
+    repository: repo,
+    listType: listType,
+    onAuthExpired: authRepository.clearSession,
+  );
+}
+
+MessagesViewModel _buildMessagesViewModel(
+  BuildContext ctx,
+  AuthRepository authRepository,
+) {
+  final repo = EchoMessagesRepository(
+    echoBaseUrl: _echoBaseUrl,
+    getAccessToken: authRepository.getAccessToken,
+    refreshAccessToken: authRepository.refreshAccessToken,
+  );
+  return MessagesViewModel(
+    repository: repo,
+    onAuthExpired: authRepository.clearSession,
   );
 }
 

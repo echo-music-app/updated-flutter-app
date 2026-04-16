@@ -7,7 +7,7 @@ import 'package:mobile/features/profile_view/presentation/widgets/profile_posts_
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
-import 'package:mobile/ui/core/widgets/app_sidebar_drawer.dart';
+import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -26,6 +26,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.viewModel != widget.viewModel) {
+      _loadProfile();
+    }
+  }
+
+  void _loadProfile() {
     widget.viewModel.loadProfile(userId: widget.userId);
   }
 
@@ -45,11 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Scaffold(
           appBar: AppBar(
             elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.menu_rounded),
-              tooltip: 'Open menu',
-              onPressed: () => showAppSidebar(context),
-            ),
+            leading: const AppTopNavLeading(),
             title: Text(title),
             centerTitle: false,
           ),
@@ -102,10 +111,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             ProfileHeaderWidget(
               header: state.header!,
+              postsCount: state.totalPostsCount,
               localAvatarPath: state.localAvatarPath,
               canEdit: widget.userId == null,
               onEditBio: () => _showEditBioDialog(state),
               onEditPhoto: _pickProfilePhoto,
+              onTapFollowers: widget.userId == null
+                  ? () => context.push(Routes.friendsFollowers)
+                  : null,
+              onTapFollowing: widget.userId == null
+                  ? () => context.push(Routes.friendsFollowing)
+                  : null,
             ),
             if (widget.userId != null) ...[
               const SizedBox(height: 12),
@@ -120,6 +136,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     : Icon(_followActionIcon(state)),
                 label: Text(_followActionLabel(state)),
               ),
+              if (state.followRelationStatus == FollowRelationStatus.accepted)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(
+                      '${Routes.messages}/${Uri.encodeComponent(widget.userId!)}',
+                    ),
+                    icon: const Icon(Icons.chat_bubble_rounded),
+                    label: const Text('Message'),
+                  ),
+                ),
             ],
           ],
         );
