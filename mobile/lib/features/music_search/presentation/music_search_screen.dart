@@ -10,6 +10,7 @@ import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
+import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
 
 class MusicSearchScreen extends StatefulWidget {
   const MusicSearchScreen({super.key, required this.viewModel});
@@ -37,7 +38,10 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.searchTitle)),
+      appBar: AppBar(
+        leading: const AppTopNavLeading(),
+        title: Text(l10n.searchTitle),
+      ),
       body: Column(
         children: [
           Padding(
@@ -188,7 +192,8 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
           itemCount: results.users.length,
           itemBuilder: (_, i) => UserSearchResultTile(
             user: results.users[i],
-            onTap: () => context.go('${Routes.profile}/${results.users[i].id}'),
+            onTap: () =>
+                context.push('${Routes.profile}/${results.users[i].id}'),
           ),
         );
     }

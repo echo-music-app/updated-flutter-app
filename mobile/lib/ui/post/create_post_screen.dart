@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
-import 'package:mobile/ui/core/widgets/app_sidebar_drawer.dart';
+import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
 import 'package:mobile/ui/home/home_view_model.dart';
 import 'package:mobile/ui/post/post_repository.dart';
 
@@ -72,11 +72,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded),
-          tooltip: 'Open menu',
-          onPressed: () => showAppSidebar(context),
-        ),
+        leading: const AppTopNavLeading(),
         title: const Text('Create Post'),
       ),
       body: Padding(

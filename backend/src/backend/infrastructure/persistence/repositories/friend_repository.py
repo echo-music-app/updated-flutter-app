@@ -177,3 +177,136 @@ class SqlAlchemyFriendRepository(IFriendRepository):
             for row in rows
             if row[0].requested_by_id is not None
         ]
+
+    async def list_accepted_friends(
+        self,
+        user_id: uuid.UUID,
+    ) -> list[tuple[uuid.UUID, str, str | None]]:
+        stmt = (
+            select(Friend)
+            .where(
+                and_(
+                    Friend.status == FriendStatus.accepted,
+                    or_(Friend.user1_id == user_id, Friend.user2_id == user_id),
+                )
+            )
+            .order_by(Friend.updated_at.desc())
+        )
+        relationships = (await self._session.execute(stmt)).scalars().all()
+        if not relationships:
+            return []
+
+        friend_ids: list[uuid.UUID] = []
+        for relationship in relationships:
+            friend_ids.append(
+                relationship.user2_id
+                if relationship.user1_id == user_id
+                else relationship.user1_id
+            )
+
+        users = (
+            await self._session.execute(
+                select(User.id, User.username, User.avatar_path).where(User.id.in_(friend_ids))
+            )
+        ).all()
+        users_by_id = {user_id_value: (username, avatar_path) for user_id_value, username, avatar_path in users}
+
+        results: list[tuple[uuid.UUID, str, str | None]] = []
+        for friend_id in friend_ids:
+            username, avatar_path = users_by_id.get(friend_id, ("Unknown user", None))
+            results.append((friend_id, username, avatar_path))
+        return results
+
+    async def list_followers(
+        self,
+        user_id: uuid.UUID,
+    ) -> list[tuple[uuid.UUID, str, str | None]]:
+        stmt = (
+            select(Friend)
+            .where(
+                and_(
+                    Friend.status == FriendStatus.accepted,
+                    or_(Friend.user1_id == user_id, Friend.user2_id == user_id),
+                )
+            )
+            .order_by(Friend.updated_at.desc())
+        )
+        relationships = (await self._session.execute(stmt)).scalars().all()
+        if not relationships:
+            return []
+
+        follower_ids: list[uuid.UUID] = []
+        for relationship in relationships:
+            if relationship.requested_by_id is None:
+                follower_ids.append(
+                    relationship.user2_id
+                    if relationship.user1_id == user_id
+                    else relationship.user1_id
+                )
+                continue
+
+            target_id = (
+                relationship.user2_id
+                if relationship.requested_by_id == relationship.user1_id
+                else relationship.user1_id
+            )
+            if target_id == user_id and relationship.requested_by_id is not None:
+                follower_ids.append(relationship.requested_by_id)
+
+        return await self._list_users_with_avatar(follower_ids)
+
+    async def list_following(
+        self,
+        user_id: uuid.UUID,
+    ) -> list[tuple[uuid.UUID, str, str | None]]:
+        stmt = (
+            select(Friend)
+            .where(
+                and_(
+                    Friend.status == FriendStatus.accepted,
+                    or_(Friend.user1_id == user_id, Friend.user2_id == user_id),
+                )
+            )
+            .order_by(Friend.updated_at.desc())
+        )
+        relationships = (await self._session.execute(stmt)).scalars().all()
+        if not relationships:
+            return []
+
+        following_ids: list[uuid.UUID] = []
+        for relationship in relationships:
+            if relationship.requested_by_id is None:
+                following_ids.append(
+                    relationship.user2_id
+                    if relationship.user1_id == user_id
+                    else relationship.user1_id
+                )
+                continue
+
+            if relationship.requested_by_id == user_id:
+                following_ids.append(
+                    relationship.user2_id
+                    if relationship.user1_id == user_id
+                    else relationship.user1_id
+                )
+
+        return await self._list_users_with_avatar(following_ids)
+
+    async def _list_users_with_avatar(
+        self,
+        user_ids: list[uuid.UUID],
+    ) -> list[tuple[uuid.UUID, str, str | None]]:
+        if not user_ids:
+            return []
+        users = (
+            await self._session.execute(
+                select(User.id, User.username, User.avatar_path).where(User.id.in_(user_ids))
+            )
+        ).all()
+        users_by_id = {user_id_value: (username, avatar_path) for user_id_value, username, avatar_path in users}
+
+        results: list[tuple[uuid.UUID, str, str | None]] = []
+        for item_user_id in user_ids:
+            username, avatar_path = users_by_id.get(item_user_id, ("Unknown user", None))
+            results.append((item_user_id, username, avatar_path))
+        return results

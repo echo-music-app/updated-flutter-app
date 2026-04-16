@@ -1,5 +1,6 @@
 import asyncio
 import os
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import pool
@@ -19,8 +20,25 @@ target_metadata = Base.metadata
 
 config = context.config
 
+
+def _database_url_from_dotenv() -> str | None:
+    dotenv_path = Path(__file__).resolve().parents[1] / ".env"
+    if not dotenv_path.exists():
+        return None
+    for raw_line in dotenv_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == "DATABASE_URL":
+            return value.strip().strip('"').strip("'")
+    return None
+
+
 # Override sqlalchemy.url from environment variable if set
 database_url = os.environ.get("DATABASE_URL")
+if not database_url:
+    database_url = _database_url_from_dotenv()
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

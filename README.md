@@ -48,12 +48,50 @@
   - `GET /v1/posts`
 - Posts are persisted in database, so they remain after app restart.
 
+## Social and Messaging Features
+- Friend profile navigation from feed:
+  - Tapping a user's name/avatar in feed opens that user's profile.
+- Bottom navigation:
+  - Messages tab is available in the bottom nav.
+  - Profile tab always routes to your own profile.
+- Followers and following:
+  - On your profile, both follower/following counts are clickable.
+  - `Followers` opens users who follow you.
+  - `Following` opens users you follow.
+  - Opening a user from these lists and going back returns to the list instead of getting stuck on loading.
+- Profile counts:
+  - Profile post count updates from real loaded posts.
+- Message permissions:
+  - Messaging is friends-only. Non-friends cannot send messages.
+- Unread indicators:
+  - Bottom nav message icon shows unread badge.
+  - Message list shows per-conversation unread badge.
+
+## API Endpoints Used By Mobile
+- Posts:
+  - `GET /v1/posts`
+  - `GET /v1/me/posts`
+  - `GET /v1/user/{userId}/posts`
+  - `POST /v1/posts`
+- Friends:
+  - `GET /v1/friends`
+  - `GET /v1/friends/followers`
+  - `GET /v1/friends/following`
+- Messages:
+  - `GET /v1/messages/threads`
+  - `GET /v1/messages/threads/{threadId}`
+  - `POST /v1/messages/threads`
+  - `POST /v1/messages/threads/{threadId}`
+
 ## Quick Verification Checklist
 1. Login in mobile app.
 2. Create a post (text and/or Spotify URL, choose privacy).
-3. Open profile and confirm the new post is visible.
-4. Restart app and login again.
-5. Confirm the post is still visible in profile/feed.
+3. Open profile and confirm the new post is visible and post count updates.
+4. Open followers/following from profile, open a friend profile, then go back.
+5. Confirm follower/following list is restored (not stuck loading).
+6. Open messages tab and verify unread badge behavior.
+7. Restart app and login again.
+8. Confirm posts and social data are still visible.
 
 ## Common Local Issues
 - `Could not load profile. Please try again.`:
@@ -64,6 +102,9 @@
   - Use `http://<your-ip>:8001` and check firewall.
 - Alembic connection errors (`getaddrinfo failed`, `ConnectionRefusedError`):
   - Ensure Postgres container is up and `backend/.env` DB host/port are correct.
+- Message/friend lists stay loading after back navigation:
+  - Pull latest code and run `flutter clean && flutter pub get`.
+  - Ensure backend endpoints above are reachable from your device/emulator.
 
 ## Service Docs
 - Backend setup and auth verification API examples: `backend/README.md`
