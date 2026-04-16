@@ -44,12 +44,14 @@ MusicSearchResultGroup _group({
   List<TrackSearchResult> tracks = const [],
   List<AlbumSearchResult> albums = const [],
   List<ArtistSearchResult> artists = const [],
+  List<UserSearchResult> users = const [],
 }) => MusicSearchResultGroup(
   query: 'test',
   limit: 20,
   tracks: tracks,
   albums: albums,
   artists: artists,
+  users: users,
   summary: _summary(),
 );
 
@@ -66,6 +68,9 @@ AlbumSearchResult _album(String id) => AlbumSearchResult(
   sources: const [],
   relevanceScore: 0.8,
 );
+
+UserSearchResult _user(String id, String username) =>
+    UserSearchResult(id: id, username: username);
 
 class _ImmediateRepo implements MusicSearchRepository {
   _ImmediateRepo(this._response);
@@ -241,6 +246,7 @@ void main() {
       expect(find.text('Tracks'), findsOneWidget);
       expect(find.text('Albums'), findsOneWidget);
       expect(find.text('Artists'), findsOneWidget);
+      expect(find.text('Users'), findsOneWidget);
     });
 
     testWidgets('tapping Albums segment updates selected type', (tester) async {
@@ -290,6 +296,21 @@ void main() {
       await tester.tap(find.text('Albums'));
       await tester.pump();
       expect(find.text('No albums found'), findsOneWidget);
+    });
+
+    testWidgets('users segment renders matching users', (tester) async {
+      final vm = _makeVm(
+        _ImmediateRepo(
+          _group(tracks: [_track('1')], users: [_user('u-1', 'alice_music')]),
+        ),
+      );
+      await tester.pumpWidget(_buildTestApp(MusicSearchScreen(viewModel: vm)));
+      await vm.search('alice');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Users'));
+      await tester.pump();
+      expect(find.text('alice_music'), findsOneWidget);
     });
   });
 

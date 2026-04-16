@@ -49,4 +49,13 @@ abstract interface class ProfileRepository {
 
   /// Uploads/replaces authenticated user's avatar image.
   Future<ProfileHeader> uploadOwnAvatar(String filePath);
+
+  /// Returns relationship status between authenticated user and [userId].
+  Future<FollowRelationStatus> getFollowStatus(String userId);
+
+  /// Sends a follow request to [userId].
+  Future<void> sendFollowRequest(String userId);
+
+  /// Accepts an incoming follow request from [userId].
+  Future<void> acceptFollowRequest(String userId);
 }

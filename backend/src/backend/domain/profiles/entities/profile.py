@@ -13,6 +13,8 @@ class PublicUserProfile:
     bio: str | None
     preferred_genres: list[str]
     is_artist: bool
+    followers_count: int
+    following_count: int
     created_at: datetime
 
 
@@ -26,6 +28,8 @@ class MeProfile:
     preferred_genres: list[str]
     status: str
     is_artist: bool
+    followers_count: int
+    following_count: int
     created_at: datetime
     updated_at: datetime
 

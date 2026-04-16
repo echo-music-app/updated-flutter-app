@@ -10,7 +10,6 @@ from backend.core.security import hash_token
 from backend.infrastructure.persistence.models.auth import AccessToken
 from backend.infrastructure.persistence.models.user import User, UserStatus
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 

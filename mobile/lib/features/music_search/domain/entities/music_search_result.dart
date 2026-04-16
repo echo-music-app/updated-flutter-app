@@ -1,4 +1,4 @@
-enum SearchResultType { tracks, albums, artists }
+enum SearchResultType { tracks, albums, artists, users }
 
 enum SearchScreenStatus { idle, loading, data, empty, error, authRequired }
 
@@ -79,6 +79,18 @@ class ArtistSearchResult {
   final double relevanceScore;
 }
 
+class UserSearchResult {
+  const UserSearchResult({
+    required this.id,
+    required this.username,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String username;
+  final String? avatarUrl;
+}
+
 class MusicSearchSummary {
   const MusicSearchSummary({
     required this.totalCount,
@@ -104,6 +116,7 @@ class MusicSearchResultGroup {
     required this.tracks,
     required this.albums,
     required this.artists,
+    required this.users,
     required this.summary,
   });
 
@@ -112,6 +125,7 @@ class MusicSearchResultGroup {
   final List<TrackSearchResult> tracks;
   final List<AlbumSearchResult> albums;
   final List<ArtistSearchResult> artists;
+  final List<UserSearchResult> users;
   final MusicSearchSummary summary;
 }
 

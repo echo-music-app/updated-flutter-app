@@ -26,7 +26,13 @@ class IAttachment(Protocol):
 
 
 class IPostRepository(Protocol):
-    async def create(self, user_id: uuid.UUID, privacy: str) -> IPost: ...
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        privacy: str,
+        text: str | None = None,
+        spotify_url: str | None = None,
+    ) -> IPost: ...
 
     async def list_for_authors(
         self,

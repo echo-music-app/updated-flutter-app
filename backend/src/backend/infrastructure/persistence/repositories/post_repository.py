@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.domain.posts.repositories import IPostRepository
 from backend.domain.posts.value_objects.post_cursor import PostCursor, encode_cursor
-from backend.infrastructure.persistence.models.attachment import Attachment
+from backend.infrastructure.persistence.models.attachment import Attachment, AttachmentSpotifyLink, AttachmentText
 from backend.infrastructure.persistence.models.post import Post, Privacy
 
 
@@ -15,9 +15,22 @@ class SqlAlchemyPostRepository(IPostRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self, user_id: uuid.UUID, privacy: str) -> Post:
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        privacy: str,
+        text: str | None = None,
+        spotify_url: str | None = None,
+    ) -> Post:
         model = Post(id=uuid6.uuid7(), user_id=user_id, privacy=Privacy(privacy))
         self._session.add(model)
+        await self._session.flush()
+        trimmed_text = text.strip() if text else None
+        if trimmed_text:
+            self._session.add(AttachmentText(id=uuid6.uuid7(), post_id=model.id, content=trimmed_text))
+        trimmed_spotify_url = spotify_url.strip() if spotify_url else None
+        if trimmed_spotify_url:
+            self._session.add(AttachmentSpotifyLink(id=uuid6.uuid7(), post_id=model.id, url=trimmed_spotify_url))
         await self._session.flush()
         return model
 

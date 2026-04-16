@@ -46,12 +46,24 @@ class CreatePostUseCase:
     def __init__(self, post_repo: IPostRepository) -> None:
         self._post_repo = post_repo
 
-    async def execute(self, *, user_id: uuid.UUID, privacy: str) -> PostDTO:
+    async def execute(
+        self,
+        *,
+        user_id: uuid.UUID,
+        privacy: str,
+        text: str | None = None,
+        spotify_url: str | None = None,
+    ) -> PostDTO:
         valid = {item.value for item in Privacy}
         if privacy not in valid:
             raise ValueError("Invalid privacy value")
 
-        created = await self._post_repo.create(user_id=user_id, privacy=privacy)
+        created = await self._post_repo.create(
+            user_id=user_id,
+            privacy=privacy,
+            text=text,
+            spotify_url=spotify_url,
+        )
         return PostDTO(
             id=created.id,
             user_id=created.user_id,

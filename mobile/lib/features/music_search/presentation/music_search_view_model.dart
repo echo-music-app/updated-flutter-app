@@ -129,6 +129,8 @@ class MusicSearchViewModel extends ChangeNotifier {
         return results.albums.length;
       case SearchResultType.artists:
         return results.artists.length;
+      case SearchResultType.users:
+        return results.users.length;
     }
   }
 }

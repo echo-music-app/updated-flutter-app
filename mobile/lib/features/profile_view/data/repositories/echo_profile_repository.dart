@@ -58,11 +58,7 @@ class EchoProfileRepository implements ProfileRepository {
     Object? data,
   }) async {
     try {
-      return await _dio.patch(
-        path,
-        data: data,
-        options: await _authOptions(),
-      );
+      return await _dio.patch(path, data: data, options: await _authOptions());
     } on DioException catch (e) {
       if (e.response?.statusCode != 401 || _refreshAccessToken == null) {
         rethrow;
@@ -84,11 +80,7 @@ class EchoProfileRepository implements ProfileRepository {
     Object? data,
   }) async {
     try {
-      return await _dio.post(
-        path,
-        data: data,
-        options: await _authOptions(),
-      );
+      return await _dio.post(path, data: data, options: await _authOptions());
     } on DioException catch (e) {
       if (e.response?.statusCode != 401 || _refreshAccessToken == null) {
         rethrow;
@@ -120,6 +112,8 @@ class EchoProfileRepository implements ProfileRepository {
       preferredGenres:
           (json['preferred_genres'] as List<dynamic>?)?.cast<String>() ?? [],
       isArtist: (json['is_artist'] as bool?) ?? false,
+      followersCount: (json['followers_count'] as num?)?.toInt() ?? 0,
+      followingCount: (json['following_count'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -133,6 +127,8 @@ class EchoProfileRepository implements ProfileRepository {
             return PostAttachmentSummary(
               id: aMap['id'] as String,
               type: aMap['type'] as String? ?? '',
+              content: aMap['content'] as String?,
+              url: aMap['url'] as String?,
             );
           }).toList() ??
           [];
@@ -174,7 +170,9 @@ class EchoProfileRepository implements ProfileRepository {
   @override
   Future<ProfileHeader> getUserProfile(String userId) async {
     try {
-      final response = await _getWithAuthRetry('$_echoBaseUrl/v1/users/$userId');
+      final response = await _getWithAuthRetry(
+        '$_echoBaseUrl/v1/users/$userId',
+      );
       return _mapProfile(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       _translateError(e);
@@ -242,6 +240,50 @@ class EchoProfileRepository implements ProfileRepository {
         data: formData,
       );
       return _mapProfile(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
+  Future<FollowRelationStatus> getFollowStatus(String userId) async {
+    try {
+      final response = await _getWithAuthRetry(
+        '$_echoBaseUrl/v1/friends/$userId/status',
+      );
+      final json = response.data as Map<String, dynamic>;
+      final status = (json['status'] as String?) ?? 'none';
+      switch (status) {
+        case 'accepted':
+          return FollowRelationStatus.accepted;
+        case 'pending_outgoing':
+          return FollowRelationStatus.pendingOutgoing;
+        case 'pending_incoming':
+          return FollowRelationStatus.pendingIncoming;
+        case 'self':
+          return FollowRelationStatus.self;
+        case 'none':
+        default:
+          return FollowRelationStatus.none;
+      }
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
+  Future<void> sendFollowRequest(String userId) async {
+    try {
+      await _postWithAuthRetry('$_echoBaseUrl/v1/friends/$userId/request');
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
+  Future<void> acceptFollowRequest(String userId) async {
+    try {
+      await _postWithAuthRetry('$_echoBaseUrl/v1/friends/$userId/accept');
     } on DioException catch (e) {
       _translateError(e);
     }

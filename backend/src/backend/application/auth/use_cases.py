@@ -1,6 +1,6 @@
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
-import re
 
 from sqlalchemy.exc import IntegrityError
 
@@ -17,8 +17,8 @@ from backend.core.security import (
 from backend.domain.auth.entities import GoogleIdentity, RegistrationResult, TokenPair, VerificationDispatch
 from backend.domain.auth.exceptions import (
     AccountDisabledError,
-    EmailTakenError,
     EmailNotVerifiedError,
+    EmailTakenError,
     GoogleAccountConflictError,
     InvalidCredentialsError,
     InvalidMfaCodeError,

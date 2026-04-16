@@ -29,7 +29,6 @@ class ProfileHeaderWidget extends StatelessWidget {
     final usernameInitial = header.username.isNotEmpty
         ? header.username[0].toUpperCase()
         : '?';
-    final stats = _profileStats(header);
     final imageProvider = _profileImageProvider();
 
     final gradientColors = isLight
@@ -159,9 +158,9 @@ class ProfileHeaderWidget extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _StatItem(label: 'Posts', value: stats.posts),
-                  _StatItem(label: 'Followers', value: stats.followers),
-                  _StatItem(label: 'Following', value: stats.following),
+                  _StatItem(label: 'Posts', value: _estimatedPostsCount),
+                  _StatItem(label: 'Followers', value: header.followersCount),
+                  _StatItem(label: 'Following', value: header.followingCount),
                 ],
               ),
             ],
@@ -187,9 +186,7 @@ class ProfileHeaderWidget extends StatelessWidget {
         header.preferredGenres.isEmpty
             ? Text(
                 l10n.profileEmptyGenresMessage,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: mutedTextColor,
-                ),
+                style: textTheme.bodyMedium?.copyWith(color: mutedTextColor),
               )
             : Wrap(
                 spacing: 8,
@@ -201,9 +198,7 @@ class ProfileHeaderWidget extends StatelessWidget {
                         ? const Color(0xFFE9EFF9)
                         : const Color(0xFF2A3342),
                     labelStyle: TextStyle(
-                      color: isLight
-                          ? const Color(0xFF111827)
-                          : Colors.white,
+                      color: isLight ? const Color(0xFF111827) : Colors.white,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(999),
@@ -215,16 +210,7 @@ class ProfileHeaderWidget extends StatelessWidget {
     );
   }
 
-  ({int posts, int followers, int following}) _profileStats(
-    ProfileHeader header,
-  ) {
-    final seed = header.id.codeUnits.fold(0, (a, b) => a + b);
-    return (
-      posts: 8 + (seed % 240),
-      followers: 1200 + (seed % 9000),
-      following: 300 + (seed % 5000),
-    );
-  }
+  int get _estimatedPostsCount => 0;
 
   ImageProvider<Object>? _profileImageProvider() {
     final path = localAvatarPath;
@@ -266,9 +252,7 @@ class _StatItem extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isLight
-                ? const Color(0xFF5F6C80)
-                : const Color(0xFFAAB3C4),
+            color: isLight ? const Color(0xFF5F6C80) : const Color(0xFFAAB3C4),
           ),
         ),
       ],

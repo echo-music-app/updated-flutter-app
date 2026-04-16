@@ -19,6 +19,11 @@ class Friend(TimestampMixin, Base):
 
     user1_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user2_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    requested_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     status: Mapped[FriendStatus] = mapped_column(nullable=False, default=FriendStatus.pending)
 
     __table_args__ = (
@@ -26,4 +31,5 @@ class Friend(TimestampMixin, Base):
         UniqueConstraint("user1_id", "user2_id", name="uq_friends_user_pair"),
         Index("ix_friends_user1_id", "user1_id"),
         Index("ix_friends_user2_id", "user2_id"),
+        Index("ix_friends_requested_by_id", "requested_by_id"),
     )

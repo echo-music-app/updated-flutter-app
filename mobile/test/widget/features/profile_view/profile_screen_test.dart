@@ -87,6 +87,16 @@ class _StubRepo implements ProfileRepository {
     if (ownError != null) throw ownError!;
     return _ownProfile!();
   }
+
+  @override
+  Future<FollowRelationStatus> getFollowStatus(String userId) async =>
+      FollowRelationStatus.none;
+
+  @override
+  Future<void> sendFollowRequest(String userId) async {}
+
+  @override
+  Future<void> acceptFollowRequest(String userId) async {}
 }
 
 ProfileViewModel _vm(_StubRepo repo, {String? currentUserId}) {
@@ -276,6 +286,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text("alice's Profile"), findsOneWidget);
+    });
+
+    testWidgets('shows Follow button for other-user profile', (tester) async {
+      final repo = _StubRepo(ownProfile: _header, ownPosts: _emptyPage);
+      final vm = _vm(repo, currentUserId: 'other-user');
+      await tester.pumpWidget(
+        _wrap(ProfileScreen(viewModel: vm, userId: 'uid-1')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(FilledButton, 'Follow'), findsOneWidget);
     });
   });
 

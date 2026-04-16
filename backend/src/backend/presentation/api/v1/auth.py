@@ -1,6 +1,6 @@
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +14,8 @@ from backend.domain.auth.exceptions import (
     AccountDisabledError,
     EmailDeliveryFailedError,
     EmailDeliveryNotConfiguredError,
-    EmailTakenError,
     EmailNotVerifiedError,
+    EmailTakenError,
     GoogleAccountConflictError,
     GoogleAuthNotConfiguredError,
     InvalidCredentialsError,

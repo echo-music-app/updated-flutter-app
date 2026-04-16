@@ -48,6 +48,32 @@ class EchoMusicSearchRepository implements MusicSearchRepository {
     }
   }
 
+  Future<Response<dynamic>> _getWithAuthRetry(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      return await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: await _authOptions(),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 401 || _refreshAccessToken == null) {
+        rethrow;
+      }
+      final refreshedToken = await _refreshAccessToken();
+      if (refreshedToken == null || refreshedToken.isEmpty) {
+        rethrow;
+      }
+      return _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: Options(headers: {'Authorization': 'Bearer $refreshedToken'}),
+      );
+    }
+  }
+
   Never _translateError(DioException e) {
     final status = e.response?.statusCode;
     if (status == 401) throw MusicSearchAuthException(e.message);
@@ -103,6 +129,14 @@ class EchoMusicSearchRepository implements MusicSearchRepository {
     );
   }
 
+  UserSearchResult _mapUser(Map<String, dynamic> json) {
+    return UserSearchResult(
+      id: (json['id'] as String?) ?? '',
+      username: (json['username'] as String?) ?? '',
+      avatarUrl: json['avatar_url'] as String?,
+    );
+  }
+
   MusicSearchSummary _mapSummary(Map<String, dynamic> json) {
     return MusicSearchSummary(
       totalCount: (json['total_count'] as num?)?.toInt() ?? 0,
@@ -146,6 +180,7 @@ class EchoMusicSearchRepository implements MusicSearchRepository {
       tracks: tracks,
       albums: albums,
       artists: artists,
+      users: const [],
       summary: _mapSummary(summaryRaw),
     );
   }
@@ -153,13 +188,46 @@ class EchoMusicSearchRepository implements MusicSearchRepository {
   @override
   Future<MusicSearchResultGroup> search(String query) async {
     try {
-      final response = await _postWithAuthRetry(
+      final usersFuture = _getWithAuthRetry(
+        '$_echoBaseUrl/v1/users/search',
+        queryParameters: {'q': query, 'limit': 20},
+      ).then((response) => _mapUsersResponse(response.data)).catchError(
+        (_) => const <UserSearchResult>[],
+      );
+      final musicResponse = await _postWithAuthRetry(
         '$_echoBaseUrl/v1/search/music',
         data: {'q': query},
       );
-      return _mapResponse(response.data as Map<String, dynamic>);
+      final musicGroup = _mapResponse(
+        musicResponse.data as Map<String, dynamic>,
+      );
+      final users = await usersFuture;
+
+      return MusicSearchResultGroup(
+        query: musicGroup.query,
+        limit: musicGroup.limit,
+        tracks: musicGroup.tracks,
+        albums: musicGroup.albums,
+        artists: musicGroup.artists,
+        users: users,
+        summary: musicGroup.summary,
+      );
     } on DioException catch (e) {
       _translateError(e);
     }
+  }
+
+  List<UserSearchResult> _mapUsersResponse(dynamic raw) {
+    final rawList = switch (raw) {
+      final List<dynamic> list => list,
+      final Map<String, dynamic> map => (map['items'] as List<dynamic>?) ?? [],
+      _ => const <dynamic>[],
+    };
+
+    return rawList
+        .whereType<Map<String, dynamic>>()
+        .map(_mapUser)
+        .where((u) => u.id.isNotEmpty && u.username.isNotEmpty)
+        .toList(growable: false);
   }
 }

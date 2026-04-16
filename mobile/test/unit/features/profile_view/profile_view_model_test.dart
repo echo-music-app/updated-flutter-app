@@ -83,6 +83,16 @@ class _FakeRepo implements ProfileRepository {
   Future<ProfileHeader> uploadOwnAvatar(String filePath) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<FollowRelationStatus> getFollowStatus(String userId) async =>
+      FollowRelationStatus.none;
+
+  @override
+  Future<void> sendFollowRequest(String userId) async {}
+
+  @override
+  Future<void> acceptFollowRequest(String userId) async {}
 }
 
 ProfileViewModel _makeViewModel(

@@ -27,9 +27,15 @@ class ProfilePostsList extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final isLight = Theme.of(context).brightness == Brightness.light;
     final cardColor = isLight ? Colors.white : const Color(0xFF1E232D);
-    final borderColor = isLight ? const Color(0xFFE5E7EB) : const Color(0xFF2D3442);
-    final mutedTextColor = isLight ? const Color(0xFF6B7280) : const Color(0xFFB8C0D0);
-    final bodyTextColor = isLight ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final borderColor = isLight
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF2D3442);
+    final mutedTextColor = isLight
+        ? const Color(0xFF6B7280)
+        : const Color(0xFFB8C0D0);
+    final bodyTextColor = isLight
+        ? const Color(0xFF374151)
+        : const Color(0xFFE5E7EB);
     final titleTextColor = isLight ? const Color(0xFF111827) : Colors.white;
 
     return Column(
@@ -59,6 +65,10 @@ class ProfilePostsList extends StatelessWidget {
             itemCount: posts.length,
             itemBuilder: (context, index) {
               final post = posts[index];
+              final textAttachment = _firstTextAttachment(post.attachments);
+              final spotifyAttachment = _firstSpotifyAttachment(
+                post.attachments,
+              );
               return Container(
                 key: ValueKey(post.id),
                 margin: const EdgeInsets.only(bottom: 14),
@@ -118,24 +128,51 @@ class ProfilePostsList extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Container(
-                      height: 150,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFD6C6B8), Color(0xFFB89B87)],
+                    if (textAttachment != null)
+                      Text(
+                        textAttachment.content!,
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: bodyTextColor,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_rounded,
-                          size: 34,
-                          color: Colors.white70,
+                    if (spotifyAttachment != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.music_note_rounded, size: 18),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              spotifyAttachment.url!,
+                              style: textTheme.bodySmall?.copyWith(
+                                color: mutedTextColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (textAttachment == null && spotifyAttachment == null)
+                      Container(
+                        height: 72,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: isLight
+                              ? const Color(0xFFF3F4F6)
+                              : const Color(0xFF2D3442),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Post created',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: mutedTextColor,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(height: 8),
                     Text(
                       '${post.attachments.length} attachment(s)',
@@ -186,6 +223,32 @@ class ProfilePostsList extends StatelessWidget {
     if (id.length <= 6) return id;
     return id.substring(0, 6);
   }
+
+  PostAttachmentSummary? _firstTextAttachment(
+    List<PostAttachmentSummary> attachments,
+  ) {
+    for (final attachment in attachments) {
+      if (attachment.type != 'text') continue;
+      final content = attachment.content?.trim();
+      if (content != null && content.isNotEmpty) {
+        return attachment;
+      }
+    }
+    return null;
+  }
+
+  PostAttachmentSummary? _firstSpotifyAttachment(
+    List<PostAttachmentSummary> attachments,
+  ) {
+    for (final attachment in attachments) {
+      if (attachment.type != 'spotify_link') continue;
+      final url = attachment.url?.trim();
+      if (url != null && url.isNotEmpty) {
+        return attachment;
+      }
+    }
+    return null;
+  }
 }
 
 class _DemoSongPostCard extends StatelessWidget {
@@ -196,10 +259,16 @@ class _DemoSongPostCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final isLight = Theme.of(context).brightness == Brightness.light;
     final cardColor = isLight ? Colors.white : const Color(0xFF1E232D);
-    final borderColor = isLight ? const Color(0xFFE5E7EB) : const Color(0xFF2D3442);
+    final borderColor = isLight
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF2D3442);
     final titleTextColor = isLight ? const Color(0xFF111827) : Colors.white;
-    final mutedTextColor = isLight ? const Color(0xFF6B7280) : const Color(0xFFB8C0D0);
-    final bodyTextColor = isLight ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final mutedTextColor = isLight
+        ? const Color(0xFF6B7280)
+        : const Color(0xFFB8C0D0);
+    final bodyTextColor = isLight
+        ? const Color(0xFF374151)
+        : const Color(0xFFE5E7EB);
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(12),
@@ -258,9 +327,7 @@ class _DemoSongPostCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             'Now playing: Midnight City - M83',
-            style: textTheme.bodyMedium?.copyWith(
-              color: bodyTextColor,
-            ),
+            style: textTheme.bodyMedium?.copyWith(color: bodyTextColor),
           ),
           const SizedBox(height: 10),
           Container(

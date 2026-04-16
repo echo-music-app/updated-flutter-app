@@ -65,7 +65,39 @@ async def test_get_user_profile_200_shape(async_client: AsyncClient):
     )
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"id", "username", "bio", "preferred_genres", "is_artist", "created_at"}
+    assert set(body.keys()) == {
+        "id",
+        "username",
+        "bio",
+        "preferred_genres",
+        "is_artist",
+        "followers_count",
+        "following_count",
+        "created_at",
+    }
+
+
+@pytest.mark.anyio
+async def test_search_users_requires_auth(async_client_no_db: AsyncClient):
+    response = await async_client_no_db.get("/v1/users/search", params={"q": "prof"})
+    assert response.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_search_users_returns_matching_users(async_client: AsyncClient):
+    token = await _register(async_client, "prof_s1@example.com", "prof_s1")
+    await _register(async_client, "prof_s2@example.com", "prof_s2_match")
+
+    response = await async_client.get(
+        "/v1/users/search",
+        params={"q": "match"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    assert body[0]["username"] == "prof_s2_match"
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +125,8 @@ async def test_get_me_200_shape(async_client: AsyncClient):
         "preferred_genres",
         "status",
         "is_artist",
+        "followers_count",
+        "following_count",
         "created_at",
         "updated_at",
     }
@@ -194,6 +228,8 @@ async def test_patch_me_success_200_shape(async_client: AsyncClient):
         "preferred_genres",
         "status",
         "is_artist",
+        "followers_count",
+        "following_count",
         "created_at",
         "updated_at",
     }

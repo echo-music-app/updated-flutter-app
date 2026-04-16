@@ -104,6 +104,14 @@ class _SidebarSheet extends StatelessWidget {
                   ),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.person_rounded),
+                  title: const Text('Profile'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    hostContext.go(Routes.profile);
+                  },
+                ),
+                ListTile(
                   leading: Icon(
                     isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                   ),

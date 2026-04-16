@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mobile/features/profile_view/domain/entities/profile.dart';
 import 'package:mobile/features/profile_view/presentation/profile_view_model.dart';
 import 'package:mobile/features/profile_view/presentation/widgets/profile_header.dart';
 import 'package:mobile/features/profile_view/presentation/widgets/profile_posts_list.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
+import 'package:mobile/routing/routes.dart';
+import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
 import 'package:mobile/ui/core/widgets/app_sidebar_drawer.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -60,6 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+          bottomNavigationBar: const AppBottomNavBar(
+            currentTab: AppBottomNavTab.profile,
+          ),
         );
       },
     );
@@ -90,12 +97,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Center(child: CircularProgressIndicator()),
         );
       case HeaderLoadState.data:
-        return ProfileHeaderWidget(
-          header: state.header!,
-          localAvatarPath: state.localAvatarPath,
-          canEdit: widget.userId == null,
-          onEditBio: () => _showEditBioDialog(state),
-          onEditPhoto: _pickProfilePhoto,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ProfileHeaderWidget(
+              header: state.header!,
+              localAvatarPath: state.localAvatarPath,
+              canEdit: widget.userId == null,
+              onEditBio: () => _showEditBioDialog(state),
+              onEditPhoto: _pickProfilePhoto,
+            ),
+            if (widget.userId != null) ...[
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _canRunFollowAction(state) ? _followUser : null,
+                icon: state.isFollowActionInProgress
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(_followActionIcon(state)),
+                label: Text(_followActionLabel(state)),
+              ),
+            ],
+          ],
         );
       case HeaderLoadState.empty:
         return Padding(
@@ -235,7 +261,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update bio. Please try again.')),
+        const SnackBar(
+          content: Text('Could not update bio. Please try again.'),
+        ),
       );
     } finally {
       controller.dispose();
@@ -264,6 +292,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: Text('Could not update profile picture. Please try again.'),
         ),
       );
+    }
+  }
+
+  Future<void> _followUser() async {
+    try {
+      await widget.viewModel.performFollowAction();
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Relationship updated.'),
+          duration: const Duration(seconds: 2),
+          action: SnackBarAction(
+            label: 'Feed',
+            onPressed: () {
+              messenger.hideCurrentSnackBar();
+              context.go(Routes.home);
+            },
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not follow user. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  bool _canRunFollowAction(ProfileViewState state) {
+    if (state.isFollowActionInProgress) return false;
+    switch (state.followRelationStatus) {
+      case FollowRelationStatus.none:
+      case FollowRelationStatus.pendingIncoming:
+        return true;
+      case FollowRelationStatus.pendingOutgoing:
+      case FollowRelationStatus.accepted:
+      case FollowRelationStatus.self:
+        return false;
+    }
+  }
+
+  IconData _followActionIcon(ProfileViewState state) {
+    switch (state.followRelationStatus) {
+      case FollowRelationStatus.pendingIncoming:
+        return Icons.check_rounded;
+      case FollowRelationStatus.pendingOutgoing:
+        return Icons.schedule_rounded;
+      case FollowRelationStatus.accepted:
+        return Icons.check_rounded;
+      case FollowRelationStatus.self:
+        return Icons.person_rounded;
+      case FollowRelationStatus.none:
+        return Icons.person_add_alt_1_rounded;
+    }
+  }
+
+  String _followActionLabel(ProfileViewState state) {
+    switch (state.followRelationStatus) {
+      case FollowRelationStatus.pendingIncoming:
+        return 'Accept Request';
+      case FollowRelationStatus.pendingOutgoing:
+        return 'Requested';
+      case FollowRelationStatus.accepted:
+        return 'Following';
+      case FollowRelationStatus.self:
+        return 'My Profile';
+      case FollowRelationStatus.none:
+        return 'Follow';
     }
   }
 }
