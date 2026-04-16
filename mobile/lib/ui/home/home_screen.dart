@@ -90,6 +90,10 @@ class _FeedPostCard extends StatelessWidget {
 
   final HomeFeedPost post;
 
+  void _openAuthorProfile(BuildContext context) {
+    context.go('${Routes.profile}/${Uri.encodeComponent(post.userId)}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(
@@ -122,7 +126,21 @@ class _FeedPostCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(post.userName, style: titleStyle),
+                  Semantics(
+                    button: true,
+                    label: 'Open ${post.userName} profile',
+                    child: InkWell(
+                      onTap: () => _openAuthorProfile(context),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 1,
+                        ),
+                        child: Text(post.userName, style: titleStyle),
+                      ),
+                    ),
+                  ),
                   Row(
                     children: [
                       Text(
