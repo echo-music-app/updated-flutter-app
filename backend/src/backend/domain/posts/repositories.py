@@ -42,6 +42,20 @@ class IPostRepository(Protocol):
         cursor_id: uuid.UUID | None,
     ) -> tuple[list[IPost], dict[uuid.UUID, list[IAttachment]], str | None]: ...
 
+    async def get_by_id(self, post_id: uuid.UUID) -> IPost | None: ...
+
+    async def list_interaction_counts(
+        self,
+        post_ids: list[uuid.UUID],
+    ) -> tuple[dict[uuid.UUID, int], dict[uuid.UUID, int]]: ...
+
+    async def list_liked_post_ids(
+        self,
+        user_id: uuid.UUID,
+        post_ids: list[uuid.UUID],
+    ) -> set[uuid.UUID]: ...
+
 
 class IFriendRepository(Protocol):
     async def get_following_user_ids(self, user_id: uuid.UUID) -> list[uuid.UUID]: ...
+    async def are_friends(self, user_id: uuid.UUID, target_user_id: uuid.UUID) -> bool: ...

@@ -16,6 +16,10 @@ class HomeFeedPage {
 
 abstract class HomeFeedRepository {
   Future<HomeFeedPage> getFollowingFeed({int pageSize = 20, String? cursor});
+  Future<HomeFeedPostEngagement> likePost(String postId);
+  Future<HomeFeedPostEngagement> unlikePost(String postId);
+  Future<List<HomeFeedComment>> listPostComments(String postId);
+  Future<HomeFeedComment> createPostComment(String postId, String content);
 }
 
 class HomeFeedAuthException implements Exception {

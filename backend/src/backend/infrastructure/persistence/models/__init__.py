@@ -18,5 +18,11 @@ from backend.infrastructure.persistence.models.base import Base, TimestampMixin 
 from backend.infrastructure.persistence.models.friend import Friend, FriendStatus  # noqa: F401
 from backend.infrastructure.persistence.models.message import Message, MessageThread, MessageThreadParticipant  # noqa: F401
 from backend.infrastructure.persistence.models.post import Post, Privacy  # noqa: F401
+from backend.infrastructure.persistence.models.post_interaction import (  # noqa: F401
+    PostActivityNotification,
+    PostActivityType,
+    PostComment,
+    PostLike,
+)
 from backend.infrastructure.persistence.models.spotify_credentials import SpotifyCredentials  # noqa: F401
 from backend.infrastructure.persistence.models.user import User, UserStatus  # noqa: F401

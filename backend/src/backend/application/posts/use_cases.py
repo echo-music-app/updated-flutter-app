@@ -32,6 +32,9 @@ class PostDTO:
     attachments: list[AttachmentDTO]
     created_at: datetime
     updated_at: datetime
+    like_count: int = 0
+    comment_count: int = 0
+    current_user_liked: bool = False
 
 
 @dataclass(slots=True)
@@ -71,6 +74,9 @@ class CreatePostUseCase:
             attachments=[],
             created_at=created.created_at,
             updated_at=created.updated_at,
+            like_count=0,
+            comment_count=0,
+            current_user_liked=False,
         )
 
 
@@ -88,18 +94,47 @@ class ListPostsUseCase:
         self._settings = settings
 
     async def list_my_posts(self, *, user_id: uuid.UUID, page_size: int, cursor: str | None) -> PostListDTO:
-        return await self._list_for_authors(author_ids=[user_id], page_size=page_size, cursor=cursor)
+        return await self._list_for_authors(
+            author_ids=[user_id],
+            viewer_user_id=user_id,
+            page_size=page_size,
+            cursor=cursor,
+        )
 
-    async def list_user_posts(self, *, target_user_id: uuid.UUID, page_size: int, cursor: str | None) -> PostListDTO:
-        return await self._list_for_authors(author_ids=[target_user_id], page_size=page_size, cursor=cursor)
+    async def list_user_posts(
+        self,
+        *,
+        target_user_id: uuid.UUID,
+        viewer_user_id: uuid.UUID,
+        page_size: int,
+        cursor: str | None,
+    ) -> PostListDTO:
+        return await self._list_for_authors(
+            author_ids=[target_user_id],
+            viewer_user_id=viewer_user_id,
+            page_size=page_size,
+            cursor=cursor,
+        )
 
     async def list_following_feed(self, *, user_id: uuid.UUID, page_size: int, cursor: str | None) -> PostListDTO:
         following = await self._friend_repo.get_following_user_ids(user_id)
         if not following:
             return PostListDTO(items=[], count=0, page_size=page_size, next_cursor=None)
-        return await self._list_for_authors(author_ids=following, page_size=page_size, cursor=cursor)
+        return await self._list_for_authors(
+            author_ids=following,
+            viewer_user_id=user_id,
+            page_size=page_size,
+            cursor=cursor,
+        )
 
-    async def _list_for_authors(self, *, author_ids: list[uuid.UUID], page_size: int, cursor: str | None) -> PostListDTO:
+    async def _list_for_authors(
+        self,
+        *,
+        author_ids: list[uuid.UUID],
+        viewer_user_id: uuid.UUID,
+        page_size: int,
+        cursor: str | None,
+    ) -> PostListDTO:
         cursor_created_at: datetime | None = None
         cursor_id: uuid.UUID | None = None
         if cursor:
@@ -113,6 +148,9 @@ class ListPostsUseCase:
             cursor_created_at=cursor_created_at,
             cursor_id=cursor_id,
         )
+        post_ids = [post.id for post in posts]
+        like_counts, comment_counts = await self._post_repo.list_interaction_counts(post_ids)
+        liked_post_ids = await self._post_repo.list_liked_post_ids(viewer_user_id, post_ids)
 
         items: list[PostDTO] = []
         for post in posts:
@@ -159,6 +197,9 @@ class ListPostsUseCase:
                     attachments=attachment_dtos,
                     created_at=post.created_at,
                     updated_at=post.updated_at,
+                    like_count=like_counts.get(post.id, 0),
+                    comment_count=comment_counts.get(post.id, 0),
+                    current_user_liked=post.id in liked_post_ids,
                 )
             )
 

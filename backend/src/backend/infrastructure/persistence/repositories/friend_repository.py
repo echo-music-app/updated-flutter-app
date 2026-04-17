@@ -120,6 +120,16 @@ class SqlAlchemyFriendRepository(IFriendRepository):
                 following.append(other)
         return following
 
+    async def are_friends(self, user_id: uuid.UUID, target_user_id: uuid.UUID) -> bool:
+        if user_id == target_user_id:
+            return True
+        user1_id, user2_id = self._ordered_pair(user_id, target_user_id)
+        stmt = select(Friend.status).where(
+            and_(Friend.user1_id == user1_id, Friend.user2_id == user2_id)
+        )
+        status = (await self._session.execute(stmt)).scalar_one_or_none()
+        return status == FriendStatus.accepted
+
     async def get_follower_following_counts(
         self,
         user_id: uuid.UUID,

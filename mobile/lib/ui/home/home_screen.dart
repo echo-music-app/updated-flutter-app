@@ -74,7 +74,12 @@ class HomeScreen extends StatelessWidget {
               const Divider(height: AppSpacing.xl),
           itemBuilder: (context, index) {
             final post = viewModel.posts[index];
-            return _FeedPostCard(post: post);
+            return _FeedPostCard(
+              post: post,
+              onToggleLike: () => viewModel.toggleLike(post.id),
+              onLoadComments: () => viewModel.loadComments(post.id),
+              onAddComment: (text) => viewModel.addComment(post.id, text),
+            );
           },
         );
     }
@@ -82,9 +87,17 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _FeedPostCard extends StatelessWidget {
-  const _FeedPostCard({required this.post});
+  const _FeedPostCard({
+    required this.post,
+    required this.onToggleLike,
+    required this.onLoadComments,
+    required this.onAddComment,
+  });
 
   final HomeFeedPost post;
+  final Future<void> Function() onToggleLike;
+  final Future<List<HomeFeedComment>> Function() onLoadComments;
+  final Future<HomeFeedComment?> Function(String text) onAddComment;
 
   void _openAuthorProfile(BuildContext context) {
     context.push('${Routes.profile}/${Uri.encodeComponent(post.userId)}');
@@ -214,8 +227,148 @@ class _FeedPostCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(post.text!, style: Theme.of(context).textTheme.bodyLarge),
         ],
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: () => onToggleLike(),
+              icon: Icon(
+                post.currentUserLiked
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                color: post.currentUserLiked
+                    ? Theme.of(context).colorScheme.error
+                    : null,
+              ),
+              label: Text(post.currentUserLiked ? 'Liked' : 'Like'),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            TextButton.icon(
+              onPressed: () => _openCommentsSheet(context),
+              icon: const Icon(Icons.mode_comment_outlined),
+              label: const Text('Comment'),
+            ),
+            const Spacer(),
+            Text(
+              '${post.likeCount} likes • ${post.commentCount} comments',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: subtleTextColor),
+            ),
+          ],
+        ),
+        if (post.comments.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          ...post.comments
+              .take(2)
+              .map(
+                (comment) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${comment.authorName}: ',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        TextSpan(text: comment.text),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+        ],
       ],
     );
+  }
+
+  Future<void> _openCommentsSheet(BuildContext context) async {
+    final initialComments = await onLoadComments();
+    if (!context.mounted) return;
+    final controller = TextEditingController();
+    final submitted = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final comments = [...initialComments];
+        void submitComment(String rawValue) {
+          final text = rawValue.trim();
+          if (text.isEmpty) return;
+          if (!sheetContext.mounted) return;
+          Navigator.of(sheetContext).pop(text);
+        }
+        return Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            top: AppSpacing.md,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.md,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Comments',
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (comments.isEmpty)
+                Text(
+                  'No comments yet. Be the first one.',
+                  style: Theme.of(sheetContext).textTheme.bodyMedium,
+                )
+              else
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: comments.length,
+                    separatorBuilder: (_, index) =>
+                        const Divider(height: 16),
+                    itemBuilder: (context, index) {
+                      final comment = comments[index];
+                      return Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '${comment.authorName}: ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(text: comment.text),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: 'Write a comment',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.send_rounded),
+                    onPressed: () => submitComment(controller.text),
+                  ),
+                ),
+                textInputAction: TextInputAction.send,
+                onSubmitted: submitComment,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    controller.dispose();
+    if (submitted == null) return;
+    await onAddComment(submitted);
   }
 }
 

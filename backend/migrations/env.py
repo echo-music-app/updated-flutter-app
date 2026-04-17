@@ -11,6 +11,7 @@ from backend.infrastructure.persistence.models.base import Base
 import backend.infrastructure.persistence.models.user  # noqa: F401
 import backend.infrastructure.persistence.models.friend  # noqa: F401
 import backend.infrastructure.persistence.models.post  # noqa: F401
+import backend.infrastructure.persistence.models.post_interaction  # noqa: F401
 import backend.infrastructure.persistence.models.attachment  # noqa: F401
 import backend.infrastructure.persistence.models.message  # noqa: F401
 import backend.infrastructure.persistence.models.auth  # noqa: F401
