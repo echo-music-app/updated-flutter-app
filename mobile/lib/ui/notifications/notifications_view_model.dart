@@ -19,16 +19,21 @@ class NotificationsViewModel extends ChangeNotifier {
   List<FollowRequestNotification> _requests = const [];
   List<FollowRequestNotification> get requests => _requests;
 
+  List<PostActivityNotification> _activities = const [];
+  List<PostActivityNotification> get activities => _activities;
+
   bool _isProcessing = false;
   bool get isProcessing => _isProcessing;
 
   void _emit({
     required NotificationsState state,
     List<FollowRequestNotification>? requests,
+    List<PostActivityNotification>? activities,
     bool? isProcessing,
   }) {
     _state = state;
     if (requests != null) _requests = requests;
+    if (activities != null) _activities = activities;
     if (isProcessing != null) _isProcessing = isProcessing;
     notifyListeners();
   }
@@ -36,17 +41,38 @@ class NotificationsViewModel extends ChangeNotifier {
   Future<void> load() async {
     _emit(state: NotificationsState.loading);
     try {
-      final items = await _repository.listIncomingFollowRequests();
-      if (items.isEmpty) {
-        _emit(state: NotificationsState.empty, requests: const []);
+      final results = await Future.wait([
+        _repository.listIncomingFollowRequests(),
+        _repository.listPostActivityNotifications(),
+      ]);
+      final requests = results[0] as List<FollowRequestNotification>;
+      final activities = results[1] as List<PostActivityNotification>;
+      if (requests.isEmpty && activities.isEmpty) {
+        _emit(
+          state: NotificationsState.empty,
+          requests: const [],
+          activities: const [],
+        );
         return;
       }
-      _emit(state: NotificationsState.data, requests: items);
+      _emit(
+        state: NotificationsState.data,
+        requests: requests,
+        activities: activities,
+      );
     } on NotificationsAuthException {
       _onAuthExpired?.call();
-      _emit(state: NotificationsState.authRequired, requests: const []);
+      _emit(
+        state: NotificationsState.authRequired,
+        requests: const [],
+        activities: const [],
+      );
     } catch (_) {
-      _emit(state: NotificationsState.error, requests: const []);
+      _emit(
+        state: NotificationsState.error,
+        requests: const [],
+        activities: const [],
+      );
     }
   }
 
@@ -61,6 +87,7 @@ class NotificationsViewModel extends ChangeNotifier {
       _emit(
         state: NotificationsState.authRequired,
         requests: const [],
+        activities: const [],
         isProcessing: false,
       );
       return false;

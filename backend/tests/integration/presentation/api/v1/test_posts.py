@@ -3,12 +3,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 import uuid6
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.infrastructure.persistence.models.attachment import Attachment, AttachmentType, AttachmentUrlProvider
 from backend.infrastructure.persistence.models.friend import Friend, FriendStatus
 from backend.infrastructure.persistence.models.post import Post, Privacy
+from backend.infrastructure.persistence.models.post_interaction import PostActivityNotification, PostActivityType, PostComment, PostLike
 from backend.infrastructure.persistence.models.user import User, UserStatus
 
 
@@ -269,3 +270,96 @@ async def test_signed_url_expiry_within_5_minutes(async_client: AsyncClient, db_
     tolerance = 10
     assert expires_ts <= int(before.timestamp()) + five_minutes + tolerance
     assert expires_ts >= int(before.timestamp()) + five_minutes - tolerance
+
+
+@pytest.mark.anyio
+async def test_like_comment_and_activity_notifications_flow(async_client: AsyncClient, db_session: AsyncSession):
+    owner_token, _ = await _register(async_client, "posts_int_9_owner@example.com", "posts_int_9_owner")
+    actor_token, _ = await _register(async_client, "posts_int_9_actor@example.com", "posts_int_9_actor")
+
+    owner = (await db_session.execute(select(User).where(User.email == "posts_int_9_owner@example.com"))).scalar_one()
+    actor = (await db_session.execute(select(User).where(User.email == "posts_int_9_actor@example.com"))).scalar_one()
+
+    user1_id, user2_id = (owner.id, actor.id) if owner.id.int < actor.id.int else (actor.id, owner.id)
+    relationship = Friend(
+        user1_id=user1_id,
+        user2_id=user2_id,
+        requested_by_id=actor.id,
+        status=FriendStatus.accepted,
+    )
+    db_session.add(relationship)
+    await db_session.flush()
+
+    create_post_resp = await async_client.post(
+        "/v1/posts",
+        json={"privacy": "Friends", "text": "hello"},
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert create_post_resp.status_code == 201
+    post_id = create_post_resp.json()["id"]
+
+    like_resp = await async_client.post(
+        f"/v1/posts/{post_id}/likes",
+        headers={"Authorization": f"Bearer {actor_token}"},
+    )
+    assert like_resp.status_code == 200
+    assert like_resp.json()["current_user_liked"] is True
+    assert like_resp.json()["like_count"] == 1
+
+    comment_resp = await async_client.post(
+        f"/v1/posts/{post_id}/comments",
+        json={"content": "Nice track"},
+        headers={"Authorization": f"Bearer {actor_token}"},
+    )
+    assert comment_resp.status_code == 201
+    assert comment_resp.json()["content"] == "Nice track"
+
+    owner_feed = await async_client.get(
+        "/v1/me/posts",
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert owner_feed.status_code == 200
+    item = owner_feed.json()["items"][0]
+    assert item["like_count"] == 1
+    assert item["comment_count"] == 1
+    assert item["current_user_liked"] is False
+
+    actor_feed = await async_client.get(
+        "/v1/posts",
+        headers={"Authorization": f"Bearer {actor_token}"},
+    )
+    assert actor_feed.status_code == 200
+    actor_item = actor_feed.json()["items"][0]
+    assert actor_item["current_user_liked"] is True
+
+    comments_list_resp = await async_client.get(
+        f"/v1/posts/{post_id}/comments",
+        headers={"Authorization": f"Bearer {actor_token}"},
+    )
+    assert comments_list_resp.status_code == 200
+    assert comments_list_resp.json()[0]["content"] == "Nice track"
+
+    notif_resp = await async_client.get(
+        "/v1/notifications/post-activity",
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert notif_resp.status_code == 200
+    activities = notif_resp.json()
+    assert len(activities) == 2
+    assert {item["activity_type"] for item in activities} == {"like", "comment"}
+
+    likes_count = (await db_session.execute(select(func.count(PostLike.id)))).scalar_one()
+    comments_count = (await db_session.execute(select(func.count(PostComment.id)))).scalar_one()
+    activity_count = (await db_session.execute(select(func.count(PostActivityNotification.id)))).scalar_one()
+    assert likes_count == 1
+    assert comments_count == 1
+    assert activity_count == 2
+
+    latest_activity = (
+        await db_session.execute(
+            select(PostActivityNotification)
+            .order_by(PostActivityNotification.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one()
+    assert latest_activity.activity_type in {PostActivityType.like, PostActivityType.comment}

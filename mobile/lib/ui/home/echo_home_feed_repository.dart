@@ -52,6 +52,46 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
     }
   }
 
+  Future<Response<dynamic>> _postWithAuthRetry(
+    String path, {
+    Object? data,
+  }) async {
+    try {
+      return await _dio.post(path, data: data, options: await _authOptions());
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 401 || _refreshAccessToken == null) {
+        rethrow;
+      }
+      final refreshedToken = await _refreshAccessToken();
+      if (refreshedToken == null || refreshedToken.isEmpty) {
+        rethrow;
+      }
+      return _dio.post(
+        path,
+        data: data,
+        options: Options(headers: {'Authorization': 'Bearer $refreshedToken'}),
+      );
+    }
+  }
+
+  Future<Response<dynamic>> _deleteWithAuthRetry(String path) async {
+    try {
+      return await _dio.delete(path, options: await _authOptions());
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 401 || _refreshAccessToken == null) {
+        rethrow;
+      }
+      final refreshedToken = await _refreshAccessToken();
+      if (refreshedToken == null || refreshedToken.isEmpty) {
+        rethrow;
+      }
+      return _dio.delete(
+        path,
+        options: Options(headers: {'Authorization': 'Bearer $refreshedToken'}),
+      );
+    }
+  }
+
   @override
   Future<HomeFeedPage> getFollowingFeed({
     int pageSize = 20,
@@ -181,6 +221,83 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
       spotifyUrl: spotifyUrl,
       privacy: _mapPrivacy(map['privacy'] as String?),
       createdAt: DateTime.parse(createdAtRaw),
+      likeCount: (map['like_count'] as num?)?.toInt() ?? 0,
+      commentCount: (map['comment_count'] as num?)?.toInt() ?? 0,
+      currentUserLiked: map['current_user_liked'] as bool? ?? false,
+    );
+  }
+
+  @override
+  Future<HomeFeedPostEngagement> likePost(String postId) async {
+    try {
+      final response = await _postWithAuthRetry('$_echoBaseUrl/v1/posts/$postId/likes');
+      return _mapEngagement(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401) throw HomeFeedAuthException(e.message);
+      throw HomeFeedLoadException(e.message);
+    }
+  }
+
+  @override
+  Future<HomeFeedPostEngagement> unlikePost(String postId) async {
+    try {
+      final response = await _deleteWithAuthRetry('$_echoBaseUrl/v1/posts/$postId/likes');
+      return _mapEngagement(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401) throw HomeFeedAuthException(e.message);
+      throw HomeFeedLoadException(e.message);
+    }
+  }
+
+  @override
+  Future<List<HomeFeedComment>> listPostComments(String postId) async {
+    try {
+      final response = await _getWithAuthRetry('$_echoBaseUrl/v1/posts/$postId/comments');
+      final raw = response.data as List<dynamic>? ?? const [];
+      return raw
+          .map((item) => item as Map<String, dynamic>)
+          .map(
+            (json) => HomeFeedComment(
+              authorName: json['username'] as String? ?? 'Unknown',
+              text: json['content'] as String? ?? '',
+              createdAt: DateTime.parse(json['created_at'] as String),
+            ),
+          )
+          .toList(growable: false);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401) throw HomeFeedAuthException(e.message);
+      throw HomeFeedLoadException(e.message);
+    }
+  }
+
+  @override
+  Future<HomeFeedComment> createPostComment(String postId, String content) async {
+    try {
+      final response = await _postWithAuthRetry(
+        '$_echoBaseUrl/v1/posts/$postId/comments',
+        data: {'content': content},
+      );
+      final json = response.data as Map<String, dynamic>;
+      return HomeFeedComment(
+        authorName: json['username'] as String? ?? 'You',
+        text: json['content'] as String? ?? content,
+        createdAt: DateTime.parse(json['created_at'] as String),
+      );
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401) throw HomeFeedAuthException(e.message);
+      throw HomeFeedLoadException(e.message);
+    }
+  }
+
+  HomeFeedPostEngagement _mapEngagement(Map<String, dynamic> json) {
+    return HomeFeedPostEngagement(
+      likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
+      commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
+      currentUserLiked: json['current_user_liked'] as bool? ?? false,
     );
   }
 

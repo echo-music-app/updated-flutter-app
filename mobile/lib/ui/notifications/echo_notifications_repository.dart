@@ -103,6 +103,32 @@ class EchoNotificationsRepository implements NotificationsRepository {
   }
 
   @override
+  Future<List<PostActivityNotification>> listPostActivityNotifications() async {
+    try {
+      final response = await _getWithAuthRetry(
+        '$_echoBaseUrl/v1/notifications/post-activity',
+      );
+      final raw = response.data as List<dynamic>? ?? const [];
+      return raw
+          .map((item) => item as Map<String, dynamic>)
+          .map(
+            (json) => PostActivityNotification(
+              id: json['id'] as String,
+              actorUserId: json['actor_user_id'] as String,
+              actorUsername: json['actor_username'] as String? ?? 'Unknown',
+              postId: json['post_id'] as String,
+              activityType: json['activity_type'] as String? ?? 'like',
+              commentPreview: json['comment_preview'] as String?,
+              createdAt: DateTime.parse(json['created_at'] as String),
+            ),
+          )
+          .toList(growable: false);
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
   Future<void> acceptFollowRequest(String requesterUserId) async {
     try {
       await _postWithAuthRetry(

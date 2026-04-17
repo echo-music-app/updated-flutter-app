@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
 import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
+import 'package:mobile/ui/notifications/notifications_repository.dart';
 import 'package:mobile/ui/notifications/notifications_view_model.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -41,7 +42,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationsState.loading:
         return const Center(child: CircularProgressIndicator());
       case NotificationsState.empty:
-        return const Center(child: Text('No follow requests right now.'));
+        return const Center(child: Text('No notifications right now.'));
       case NotificationsState.error:
         return Center(
           child: Column(
@@ -71,29 +72,63 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         );
       case NotificationsState.data:
-        return ListView.separated(
-          itemCount: widget.viewModel.requests.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final request = widget.viewModel.requests[index];
-            return ListTile(
-              leading: CircleAvatar(
-                child: Text(
-                  request.requesterUsername.isEmpty
-                      ? '?'
-                      : request.requesterUsername[0].toUpperCase(),
+        final items = <Widget>[
+          if (widget.viewModel.activities.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Post Activity',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+            ...widget.viewModel.activities.map(
+              (activity) => ListTile(
+                leading: CircleAvatar(
+                  child: Text(
+                    activity.actorUsername.isEmpty
+                        ? '?'
+                        : activity.actorUsername[0].toUpperCase(),
+                  ),
+                ),
+                title: Text(activity.actorUsername),
+                subtitle: Text(_activitySubtitle(activity)),
+              ),
+            ),
+          ],
+          if (widget.viewModel.requests.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Follow Requests',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+            ...widget.viewModel.requests.map(
+              (request) => ListTile(
+                leading: CircleAvatar(
+                  child: Text(
+                    request.requesterUsername.isEmpty
+                        ? '?'
+                        : request.requesterUsername[0].toUpperCase(),
+                  ),
+                ),
+                title: Text(request.requesterUsername),
+                subtitle: const Text('Sent you a follow request'),
+                trailing: FilledButton(
+                  onPressed: widget.viewModel.isProcessing
+                      ? null
+                      : () => _acceptRequest(request.requesterUserId),
+                  child: const Text('Accept'),
                 ),
               ),
-              title: Text(request.requesterUsername),
-              subtitle: const Text('Sent you a follow request'),
-              trailing: FilledButton(
-                onPressed: widget.viewModel.isProcessing
-                    ? null
-                    : () => _acceptRequest(request.requesterUserId),
-                child: const Text('Accept'),
-              ),
-            );
-          },
+            ),
+          ],
+        ];
+
+        return ListView.separated(
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (context, index) => items[index],
         );
     }
   }
@@ -108,5 +143,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
     );
+  }
+
+  String _activitySubtitle(PostActivityNotification activity) {
+    if (activity.activityType == 'comment') {
+      final preview = activity.commentPreview;
+      if (preview != null && preview.trim().isNotEmpty) {
+        return 'Commented: "${preview.trim()}"';
+      }
+      return 'Commented on your post';
+    }
+    return 'Liked your post';
   }
 }
