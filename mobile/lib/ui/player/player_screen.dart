@@ -72,7 +72,7 @@ class PlayerScreen extends StatelessWidget {
             Semantics(
               label: l10n.retryButton,
               child: ElevatedButton(
-                onPressed: null,
+                onPressed: viewModel.retry,
                 child: Text(l10n.retryButton),
               ),
             ),
@@ -114,34 +114,36 @@ class PlayerScreen extends StatelessWidget {
     controller,
   ) {
     final track = controller.state.currentTrack!;
-    return Center(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AlbumArtWidget(imageUrl: track.albumArtUrl),
-            SizedBox(height: AppSpacing.lg),
-            Text(
-              track.name,
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: AppSpacing.sm),
-            Text(
-              track.artistName,
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: AppSpacing.lg),
-            SeekBarWidget(
-              controller: controller,
-              durationMs: track.durationMs,
-              positionMs: controller.displayPositionMs,
-            ),
-            SizedBox(height: AppSpacing.md),
-            PlaybackControls(controller: controller),
-          ],
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AlbumArtWidget(imageUrl: track.albumArtUrl),
+              SizedBox(height: AppSpacing.lg),
+              Text(
+                track.name,
+                style: Theme.of(context).textTheme.headlineMedium,
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: AppSpacing.sm),
+              Text(
+                track.artistName,
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: AppSpacing.lg),
+              SeekBarWidget(
+                controller: controller,
+                durationMs: track.durationMs,
+                positionMs: controller.displayPositionMs,
+              ),
+              SizedBox(height: AppSpacing.md),
+              PlaybackControls(controller: controller),
+            ],
+          ),
         ),
       ),
     );

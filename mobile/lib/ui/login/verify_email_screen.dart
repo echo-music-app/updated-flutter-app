@@ -84,6 +84,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
   }
 
   Future<void> _verify() async {
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     await widget.viewModel.verifyEmail(
       _emailController.text.trim(),
@@ -92,6 +93,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
   }
 
   Future<void> _resend() async {
+    FocusScope.of(context).unfocus();
     if (_emailController.text.trim().isEmpty) return;
     await widget.viewModel.resendVerificationCode(_emailController.text.trim());
   }
@@ -153,6 +155,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
             ),
             Center(
               child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.all(AppSpacing.lg),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
@@ -189,9 +193,12 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
                             return Form(
                               key: _formKey,
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
                               child: AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 260),
-                                child: Column(
+                                child: AutofillGroup(
+                                  child: Column(
                                   key: ValueKey(
                                     '${widget.viewModel.isLoading}-${widget.viewModel.error}-${pending?.debugCode}',
                                   ),
@@ -256,6 +263,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                       style: TextStyle(color: _textMuted, fontSize: 18),
                                     ),
                                     SizedBox(height: AppSpacing.lg),
+                                    Text(
+                                      'Use the same email you registered with',
+                                      style: TextStyle(
+                                        color: _textMuted,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    SizedBox(height: AppSpacing.sm),
                                     if (pending != null) ...[
                                       Container(
                                         padding: EdgeInsets.all(AppSpacing.md),
@@ -302,6 +318,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                     TextFormField(
                                       controller: _emailController,
                                       keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [AutofillHints.email],
                                       style: TextStyle(color: _textPrimary),
                                       decoration: _fieldDecoration(
                                         hintText: 'you@example.com',
@@ -310,6 +328,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                           color: _textMuted,
                                         ),
                                       ),
+                                      onFieldSubmitted: (_) {
+                                        FocusScope.of(context).nextFocus();
+                                      },
                                       validator: (value) {
                                         final email = value?.trim() ?? '';
                                         if (email.isEmpty) {
@@ -328,6 +349,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                     TextFormField(
                                       controller: _codeController,
                                       keyboardType: TextInputType.number,
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [AutofillHints.oneTimeCode],
                                       maxLength: 6,
                                       style: TextStyle(color: _textPrimary),
                                       decoration: _fieldDecoration(
@@ -337,6 +360,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                           color: _textMuted,
                                         ),
                                       ),
+                                      onFieldSubmitted: (_) => _verify(),
                                       validator: (value) {
                                         final code = value?.trim() ?? '';
                                         if (!RegExp(r'^\d{6}$').hasMatch(code)) {
@@ -353,8 +377,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                             ? null
                                             : _verify,
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.white,
-                                          foregroundColor: const Color(0xFF111827),
+                                          backgroundColor: _purpleStart,
+                                          foregroundColor: Colors.white,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(12),
                                           ),
@@ -369,6 +393,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                                 width: 20,
                                                 child: CircularProgressIndicator(
                                                   strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<Color>(
+                                                        Colors.white,
+                                                      ),
                                                 ),
                                               )
                                             : const Text('Verify Email'),
@@ -396,6 +424,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
                                       ],
                                     ),
                                   ],
+                                  ),
                                 ),
                               ),
                             );

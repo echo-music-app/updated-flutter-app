@@ -8,7 +8,8 @@ class IUser(Protocol):
     email: str
     username: str
     password_hash: str
-    google_subject: str | None
+    apple_subject: str | None
+    soundcloud_subject: str | None
     status: object
     email_verified_at: datetime | None
     email_verification_code_hash: bytes | None
@@ -37,7 +38,9 @@ class IRefreshToken(Protocol):
 
 
 class IUserRepository(Protocol):
-    async def get_by_google_subject(self, google_subject: str) -> IUser | None: ...
+    async def get_by_apple_subject(self, apple_subject: str) -> IUser | None: ...
+
+    async def get_by_soundcloud_subject(self, soundcloud_subject: str) -> IUser | None: ...
 
     async def get_by_email(self, email: str) -> IUser | None: ...
 
@@ -58,11 +61,19 @@ class IUserRepository(Protocol):
 
     async def mark_email_verified(self, user_id: uuid.UUID, *, verified_at: datetime) -> IUser | None: ...
 
-    async def link_google_account(
+    async def link_apple_account(
         self,
         user_id: uuid.UUID,
         *,
-        google_subject: str,
+        apple_subject: str,
+        verified_at: datetime,
+    ) -> IUser | None: ...
+
+    async def link_soundcloud_account(
+        self,
+        user_id: uuid.UUID,
+        *,
+        soundcloud_subject: str,
         verified_at: datetime,
     ) -> IUser | None: ...
 

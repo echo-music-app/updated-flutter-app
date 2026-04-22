@@ -1,13 +1,17 @@
 import uuid
 from datetime import UTC, datetime, timedelta
+import re
 
 from backend.core.config import Settings
+from backend.core.security import hash_password
 from backend.domain.auth.entities import TokenPair
 from backend.domain.auth.repositories import ITokenRepository
 from backend.domain.spotify.entities import TrackResponse
 from backend.domain.spotify.exceptions import SpotifyAuthError
 from backend.domain.spotify.repositories import ISpotifyCredentialsRepository
+from backend.infrastructure.persistence.models.user import UserStatus
 from backend.infrastructure.spotify.client import SpotifyClient
+from backend.domain.auth.repositories import IUserRepository
 
 
 class SpotifyUseCases:
@@ -15,11 +19,13 @@ class SpotifyUseCases:
         self,
         creds_repo: ISpotifyCredentialsRepository,
         token_repo: ITokenRepository,
+        user_repo: IUserRepository,
         spotify_client: SpotifyClient,
         settings: Settings,
     ) -> None:
         self._creds_repo = creds_repo
         self._token_repo = token_repo
+        self._user_repo = user_repo
         self._spotify_client = spotify_client
         self._settings = settings
 
@@ -33,7 +39,10 @@ class SpotifyUseCases:
         from backend.infrastructure.spotify.client import encrypt_token
 
         token_data = await self._spotify_client.exchange_code(code, code_verifier, redirect_uri)
-        spotify_user_id = await self._spotify_client.get_user_profile(token_data["access_token"])
+        profile = await self._spotify_client.get_user_profile(token_data["access_token"])
+        spotify_user_id = profile.get("id")
+        if not spotify_user_id:
+            raise SpotifyAuthError("Spotify profile is missing user id")
 
         encrypted_access = encrypt_token(token_data["access_token"])
         encrypted_refresh = encrypt_token(token_data["refresh_token"])
@@ -53,7 +62,23 @@ class SpotifyUseCases:
             effective_user_id = user_id or existing.user_id
         else:
             if not user_id:
-                raise SpotifyAuthError("user_id required for first-time Spotify link")
+                email = (profile.get("email") or "").strip().lower()
+                if not email:
+                    raise SpotifyAuthError("Spotify account email is unavailable")
+                user = await self._user_repo.get_by_email(email)
+                if user is None:
+                    username = await self._generate_available_username(
+                        profile.get("display_name") or email.split("@", 1)[0],
+                    )
+                    user = await self._user_repo.create(
+                        email,
+                        username,
+                        hash_password(str(uuid.uuid4())),
+                    )
+                    await self._user_repo.mark_email_verified(user.id, verified_at=datetime.now(UTC))
+                if str(getattr(user, "status", "")) == str(UserStatus.disabled):
+                    raise SpotifyAuthError("Account is disabled")
+                user_id = user.id
             await self._creds_repo.upsert(
                 spotify_user_id=spotify_user_id,
                 user_id=user_id,
@@ -131,3 +156,15 @@ class SpotifyUseCases:
             refresh_token=refresh_raw,
             expires_in=self._settings.access_token_ttl_seconds,
         )
+
+    async def _generate_available_username(self, seed: str) -> str:
+        base = re.sub(r"[^a-zA-Z0-9_.-]+", "", seed.lower()) or "spotify-user"
+        base = base[:50]
+        candidate = base
+        suffix = 1
+        while await self._user_repo.get_by_username(candidate) is not None:
+            suffix_text = str(suffix)
+            trimmed_base = base[: max(1, 50 - len(suffix_text) - 1)]
+            candidate = f"{trimmed_base}-{suffix_text}"
+            suffix += 1
+        return candidate

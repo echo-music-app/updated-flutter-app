@@ -23,15 +23,18 @@ class MusicSearchScreen extends StatefulWidget {
 
 class _MusicSearchScreenState extends State<MusicSearchScreen> {
   final _controller = TextEditingController();
+  final _searchFocusNode = FocusNode();
 
   @override
   void dispose() {
+    _searchFocusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   void _submit() {
-    widget.viewModel.search(_controller.text);
+    FocusScope.of(context).unfocus();
+    widget.viewModel.search(_controller.text.trim());
   }
 
   @override
@@ -42,35 +45,73 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
         leading: const AppTopNavLeading(),
         title: Text(l10n.searchTitle),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Semantics(
-              label: l10n.searchSubmitLabel,
-              child: TextField(
-                controller: _controller,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) => _submit(),
-                decoration: InputDecoration(
-                  hintText: l10n.searchInputHint,
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.search),
-                    tooltip: l10n.searchSubmitLabel,
-                    onPressed: _submit,
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.sm,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Semantics(
+                    label: l10n.searchSubmitLabel,
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _searchFocusNode,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _submit(),
+                      decoration: InputDecoration(
+                        hintText: l10n.searchInputHint,
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_controller.text.trim().isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded),
+                                tooltip: 'Clear',
+                                onPressed: () {
+                                  _controller.clear();
+                                  setState(() {});
+                                },
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_forward_rounded),
+                              tooltip: l10n.searchSubmitLabel,
+                              onPressed: _submit,
+                            ),
+                          ],
+                        ),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: ListenableBuilder(
-              listenable: widget.viewModel,
-              builder: (context, _) =>
-                  _buildBody(context, widget.viewModel.state, l10n),
+            Expanded(
+              child: ListenableBuilder(
+                listenable: widget.viewModel,
+                builder: (context, _) =>
+                    _buildBody(context, widget.viewModel.state, l10n),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: const AppBottomNavBar(
         currentTab: AppBottomNavTab.search,
@@ -113,40 +154,58 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
 
       case SearchScreenStatus.data:
       case SearchScreenStatus.empty:
+        final resultCount = _countForSelectedType(state);
         return Column(
           children: [
+            if (state.activeQuery.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Showing $resultCount result(s) for "${state.activeQuery}"',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
-              child: Semantics(
-                label: l10n.searchSegmentControlLabel,
-                child: SegmentedButton<SearchResultType>(
-                  segments: [
-                    ButtonSegment(
-                      value: SearchResultType.tracks,
-                      label: Text(l10n.searchSegmentTracks),
-                    ),
-                    ButtonSegment(
-                      value: SearchResultType.albums,
-                      label: Text(l10n.searchSegmentAlbums),
-                    ),
-                    ButtonSegment(
-                      value: SearchResultType.artists,
-                      label: Text(l10n.searchSegmentArtists),
-                    ),
-                    const ButtonSegment(
-                      value: SearchResultType.users,
-                      label: Text('Users'),
-                    ),
-                  ],
-                  selected: {state.selectedType},
-                  onSelectionChanged: (selection) {
-                    if (selection.isNotEmpty) {
-                      widget.viewModel.selectType(selection.first);
-                    }
-                  },
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Semantics(
+                  label: l10n.searchSegmentControlLabel,
+                  child: SegmentedButton<SearchResultType>(
+                    segments: [
+                      ButtonSegment(
+                        value: SearchResultType.tracks,
+                        label: Text(l10n.searchSegmentTracks),
+                      ),
+                      ButtonSegment(
+                        value: SearchResultType.albums,
+                        label: Text(l10n.searchSegmentAlbums),
+                      ),
+                      ButtonSegment(
+                        value: SearchResultType.artists,
+                        label: Text(l10n.searchSegmentArtists),
+                      ),
+                      const ButtonSegment(
+                        value: SearchResultType.users,
+                        label: Text('Users'),
+                      ),
+                    ],
+                    selected: {state.selectedType},
+                    onSelectionChanged: (selection) {
+                      if (selection.isNotEmpty) {
+                        widget.viewModel.selectType(selection.first);
+                      }
+                    },
+                  ),
                 ),
               ),
             ),
@@ -209,6 +268,21 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
         return l10n.searchArtistsEmptyMessage;
       case SearchResultType.users:
         return 'No users found';
+    }
+  }
+
+  int _countForSelectedType(MusicSearchViewState state) {
+    final results = state.results;
+    if (results == null) return 0;
+    switch (state.selectedType) {
+      case SearchResultType.tracks:
+        return results.tracks.length;
+      case SearchResultType.albums:
+        return results.albums.length;
+      case SearchResultType.artists:
+        return results.artists.length;
+      case SearchResultType.users:
+        return results.users.length;
     }
   }
 }

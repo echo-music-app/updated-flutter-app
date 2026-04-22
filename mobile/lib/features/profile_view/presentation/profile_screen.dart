@@ -62,15 +62,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: Text(title),
             centerTitle: false,
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeaderSection(context, l10n, state),
-                const SizedBox(height: 16),
-                _buildPostsSection(context, l10n, state),
-              ],
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)],
+              ),
+            ),
+            child: RefreshIndicator(
+              onRefresh: () async => _loadProfile(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeaderSection(context, l10n, state),
+                    const SizedBox(height: 14),
+                    _buildPostsSection(context, l10n, state),
+                  ],
+                ),
+              ),
             ),
           ),
           bottomNavigationBar: const AppBottomNavBar(
@@ -101,87 +116,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ) {
     switch (state.headerState) {
       case HeaderLoadState.loading:
-        return const Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
+        return const _ProfilePanel(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
         );
       case HeaderLoadState.data:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ProfileHeaderWidget(
-              header: state.header!,
-              postsCount: state.totalPostsCount,
-              localAvatarPath: state.localAvatarPath,
-              canEdit: widget.userId == null,
-              onEditBio: () => _showEditBioDialog(state),
-              onEditPhoto: _pickProfilePhoto,
-              onTapFollowers: widget.userId == null
-                  ? () => context.push(Routes.friendsFollowers)
-                  : null,
-              onTapFollowing: widget.userId == null
-                  ? () => context.push(Routes.friendsFollowing)
-                  : null,
-            ),
-            if (widget.userId != null) ...[
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _canRunFollowAction(state) ? _followUser : null,
-                icon: state.isFollowActionInProgress
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(_followActionIcon(state)),
-                label: Text(_followActionLabel(state)),
-              ),
-              if (state.followRelationStatus == FollowRelationStatus.accepted)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push(
-                      '${Routes.messages}/${Uri.encodeComponent(widget.userId!)}',
-                    ),
-                    icon: const Icon(Icons.chat_bubble_rounded),
-                    label: const Text('Message'),
-                  ),
-                ),
-            ],
-          ],
-        );
-      case HeaderLoadState.empty:
-        return Padding(
-          padding: const EdgeInsets.all(8),
-          child: Text(l10n.profileEmptyBioMessage),
-        );
-      case HeaderLoadState.error:
-        return Padding(
-          padding: const EdgeInsets.all(8),
+        return _ProfilePanel(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(l10n.profileLoadErrorMessage),
-              const SizedBox(height: 8),
-              Semantics(
-                label: l10n.retryButton,
-                child: ElevatedButton(
-                  onPressed: widget.viewModel.retryHeader,
-                  child: Text(l10n.retryButton),
-                ),
+              ProfileHeaderWidget(
+                header: state.header!,
+                postsCount: state.totalPostsCount,
+                localAvatarPath: state.localAvatarPath,
+                canEdit: widget.userId == null,
+                onEditBio: () => _showEditBioDialog(state),
+                onEditPhoto: _pickProfilePhoto,
+                onTapFollowers: widget.userId == null
+                    ? () => context.push(Routes.friendsFollowers)
+                    : null,
+                onTapFollowing: widget.userId == null
+                    ? () => context.push(Routes.friendsFollowing)
+                    : null,
               ),
+              if (widget.userId != null) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _canRunFollowAction(state) ? _followUser : null,
+                  icon: state.isFollowActionInProgress
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(_followActionIcon(state)),
+                  label: Text(_followActionLabel(state)),
+                ),
+                if (state.followRelationStatus == FollowRelationStatus.accepted)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push(
+                        '${Routes.messages}/${Uri.encodeComponent(widget.userId!)}',
+                      ),
+                      icon: const Icon(Icons.chat_bubble_rounded),
+                      label: const Text('Message'),
+                    ),
+                  ),
+              ],
             ],
           ),
         );
+      case HeaderLoadState.empty:
+        return _ProfilePanel(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(l10n.profileEmptyBioMessage),
+          ),
+        );
+      case HeaderLoadState.error:
+        return _ProfilePanel(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.profileLoadErrorMessage),
+                const SizedBox(height: 8),
+                Semantics(
+                  label: l10n.retryButton,
+                  child: ElevatedButton(
+                    onPressed: widget.viewModel.retryHeader,
+                    child: Text(l10n.retryButton),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       case HeaderLoadState.notFound:
-        return Padding(
-          padding: const EdgeInsets.all(8),
-          child: Text(l10n.profileNotFoundMessage),
+        return _ProfilePanel(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(l10n.profileNotFoundMessage),
+          ),
         );
       case HeaderLoadState.authRequired:
-        return Padding(
-          padding: const EdgeInsets.all(8),
-          child: Text(l10n.profileLoadErrorMessage),
+        return _ProfilePanel(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(l10n.profileLoadErrorMessage),
+          ),
         );
     }
   }
@@ -191,8 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     AppLocalizations l10n,
     ProfileViewState state,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+    return _ProfilePanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -200,9 +226,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             l10n.profilePostsSectionTitle,
             style: Theme.of(
               context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildPostsContent(l10n, state),
         ],
       ),
@@ -220,6 +246,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           isLoadingMore: false,
           onLoadMore: widget.viewModel.loadMore,
           onRetryLoadMore: widget.viewModel.retryPosts,
+          onViewComments: widget.viewModel.loadPostComments,
+          onAddComment: widget.viewModel.addPostComment,
         );
       case PostsLoadState.error:
         return Column(
@@ -244,6 +272,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           isLoadingMore: state.isLoadingMore,
           onLoadMore: widget.viewModel.loadMore,
           onRetryLoadMore: widget.viewModel.retryPosts,
+          onViewComments: widget.viewModel.loadPostComments,
+          onAddComment: widget.viewModel.addPostComment,
         );
     }
   }
@@ -392,5 +422,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case FollowRelationStatus.none:
         return 'Follow';
     }
+  }
+}
+
+class _ProfilePanel extends StatelessWidget {
+  const _ProfilePanel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: isLight ? Colors.white : const Color(0xFF1E232D),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(padding: const EdgeInsets.all(14), child: child),
+    );
   }
 }

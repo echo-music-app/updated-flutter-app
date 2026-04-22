@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,13 +6,12 @@ from backend.application.spotify.use_cases import SpotifyUseCases
 from backend.core.config import get_settings
 from backend.core.database import get_db_session
 from backend.core.decorators import public_endpoint
-from backend.core.deps import get_current_user
 from backend.domain.spotify.exceptions import SpotifyAuthError
-from backend.infrastructure.persistence.models.user import User
 from backend.infrastructure.persistence.repositories.spotify_credentials_repository import (
     SqlAlchemySpotifyCredentialsRepository,
 )
 from backend.infrastructure.persistence.repositories.token_repository import SqlAlchemyTokenRepository
+from backend.infrastructure.persistence.repositories.user_repository import SqlAlchemyUserRepository
 from backend.infrastructure.spotify.client import SpotifyClient
 
 router = APIRouter(prefix="/auth/spotify", tags=["spotify-auth"])
@@ -33,8 +32,10 @@ class SpotifyTokenRequest(BaseModel):
     @field_validator("redirect_uri")
     @classmethod
     def validate_redirect_uri(cls, v: str) -> str:
-        if not v.startswith("https://"):
-            raise ValueError("redirect_uri must use HTTPS")
+        if "://" not in v:
+            raise ValueError("redirect_uri must be an absolute URI")
+        if v.startswith("http://"):
+            raise ValueError("redirect_uri must not use insecure HTTP")
         return v
 
 
@@ -53,22 +54,22 @@ def get_spotify_use_cases(db: AsyncSession = Depends(get_db_session)) -> Spotify
     return SpotifyUseCases(
         creds_repo=SqlAlchemySpotifyCredentialsRepository(db),
         token_repo=SqlAlchemyTokenRepository(db),
+        user_repo=SqlAlchemyUserRepository(db),
         spotify_client=SpotifyClient(),
         settings=get_settings(),
     )
 
 
 @router.post("/token", response_model=TokenResponse)
+@public_endpoint
 async def spotify_token_exchange(
     body: SpotifyTokenRequest,
-    request: Request,
-    current_user: User = Depends(get_current_user),
     use_cases: SpotifyUseCases = Depends(get_spotify_use_cases),
 ):
     """Exchange a Spotify authorization code for Echo tokens."""
     try:
         token_pair = await use_cases.exchange_code(
-            user_id=current_user.id,
+            user_id=None,
             code=body.code,
             code_verifier=body.code_verifier,
             redirect_uri=body.redirect_uri,

@@ -26,13 +26,15 @@ class _LoginScreenState extends State<LoginScreen>
   static const _rememberPasswordKey = 'remember_me_password';
   static const _bgTop = Color(0xFF0B1222);
   static const _bgBottom = Color(0xFF050912);
-  static const _cardBg = Color(0xFF05070B);
-  static const _cardBorder = Color(0xFF1E2A44);
   static const _fieldBg = Color(0xFF0D1118);
   static const _fieldBorder = Color(0xFF222A36);
   static const _textMuted = Color(0xFF9BA7BA);
   static const _purpleStart = Color(0xFF7C3AED);
-  static const _purpleEnd = Color(0xFF3B82F6);
+  static const _purpleEnd = Color(0xFF5B5FFB);
+  static const _spotifyGreen = Color(0xFF1ED760);
+  static const _soundCloudOrange = Color(0xFFFF7700);
+  static const _socialLogoSize = 56.0;
+  static const _socialLogoCornerRadius = 18.0;
 
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -57,9 +59,6 @@ class _LoginScreenState extends State<LoginScreen>
   Color get _bgTopColor => _isLightMode ? const Color(0xFFF7F9FC) : _bgTop;
   Color get _bgBottomColor =>
       _isLightMode ? const Color(0xFFEFF3FA) : _bgBottom;
-  Color get _cardBgColor => _isLightMode ? Colors.white : _cardBg;
-  Color get _cardBorderColor =>
-      _isLightMode ? const Color(0xFFDCE4F0) : _cardBorder;
   Color get _fieldBgColor => _isLightMode ? const Color(0xFFF5F7FB) : _fieldBg;
   Color get _fieldBorderColor =>
       _isLightMode ? const Color(0xFFD8E0EC) : _fieldBorder;
@@ -110,6 +109,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
     if (_isLogin) {
@@ -185,26 +185,6 @@ class _LoginScreenState extends State<LoginScreen>
         child: Stack(
           children: [
             Positioned(
-              top: 14,
-              left: 14,
-              child: SafeArea(
-                child: Builder(
-                  builder: (context) => DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: _themeChipBg,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: _themeChipBorder),
-                    ),
-                    child: IconButton(
-                      onPressed: () => showAppSidebar(context),
-                      icon: Icon(Icons.menu_rounded, color: _textPrimaryColor),
-                      tooltip: 'Open menu',
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
               top: -90,
               right: -35,
               child: TweenAnimationBuilder<double>(
@@ -225,31 +205,42 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
+            Positioned(
+              bottom: -120,
+              left: -70,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.9, end: 1),
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
+                builder: (_, scale, child) =>
+                    Transform.scale(scale: scale, child: child),
+                child: Container(
+                  width: 260,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        (_isLightMode
+                                ? const Color(0xFF4F8DFD)
+                                : const Color(0xFF4B6BFF))
+                            .withValues(alpha: _isLightMode ? 0.10 : 0.12),
+                  ),
+                ),
+              ),
+            ),
             Center(
               child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.all(AppSpacing.lg),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
+                  constraints: const BoxConstraints(maxWidth: 620),
                   child: FadeTransition(
                     opacity: _fadeIn,
                     child: SlideTransition(
                       position: _slideIn,
-                      child: Container(
+                      child: Padding(
                         padding: EdgeInsets.all(AppSpacing.lg),
-                        decoration: BoxDecoration(
-                          color: _cardBgColor,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: _cardBorderColor),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _isLightMode
-                                  ? const Color(0x220C1628)
-                                  : const Color(0x44000000),
-                              blurRadius: _isLightMode ? 18 : 30,
-                              offset: const Offset(0, 16),
-                            ),
-                          ],
-                        ),
                         child: ListenableBuilder(
                           listenable: widget.viewModel,
                           builder: (context, _) {
@@ -275,210 +266,241 @@ class _LoginScreenState extends State<LoginScreen>
                             }
                             return Form(
                               key: _formKey,
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
                               child: AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 260),
-                                child: Column(
-                                  key: ValueKey(
-                                    '$_isLogin-${pending != null}-${widget.viewModel.mfaRequired}',
-                                  ),
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          color: _themeChipBg,
-                                          borderRadius: BorderRadius.circular(
-                                            999,
-                                          ),
-                                          border: Border.all(
-                                            color: _themeChipBorder,
+                                child: AutofillGroup(
+                                  child: Column(
+                                    key: ValueKey(
+                                      '$_isLogin-${pending != null}-${widget.viewModel.mfaRequired}',
+                                    ),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildHeader(_isLogin),
+                                      SizedBox(height: AppSpacing.lg),
+                                      if (pending != null) ...[
+                                        _buildPendingCard(
+                                          pending.message,
+                                          pending.debugCode,
+                                        ),
+                                        SizedBox(height: AppSpacing.md),
+                                        SizedBox(
+                                          height: 48,
+                                          child: OutlinedButton(
+                                            onPressed:
+                                                widget.viewModel.isLoading
+                                                ? null
+                                                : () => context.go(
+                                                    '${Routes.verifyEmail}?email=${Uri.encodeComponent(pending.email)}',
+                                                  ),
+                                            child: const Text(
+                                              'Open verification screen',
+                                            ),
                                           ),
                                         ),
-                                        child: IconButton(
-                                          icon: Icon(
-                                            isDarkMode
-                                                ? Icons.light_mode_rounded
-                                                : Icons.dark_mode_rounded,
-                                            color: _textPrimaryColor,
-                                          ),
-                                          tooltip: isDarkMode
-                                              ? 'Switch to light mode'
-                                              : 'Switch to dark mode',
-                                          onPressed: () =>
-                                              themeController.toggle(),
+                                        SizedBox(height: AppSpacing.md),
+                                      ],
+                                      if (widget.viewModel.error != null) ...[
+                                        _buildErrorCard(
+                                          widget.viewModel.error!,
                                         ),
-                                      ),
-                                    ),
-                                    _buildHeader(_isLogin),
-                                    SizedBox(height: AppSpacing.lg),
-                                    if (pending != null) ...[
-                                      _buildPendingCard(
-                                        pending.message,
-                                        pending.debugCode,
-                                      ),
-                                      SizedBox(height: AppSpacing.md),
-                                      SizedBox(
-                                        height: 48,
-                                        child: OutlinedButton(
-                                          onPressed: widget.viewModel.isLoading
-                                              ? null
-                                              : () => context.go(
-                                                  '${Routes.verifyEmail}?email=${Uri.encodeComponent(pending.email)}',
-                                                ),
-                                          child: const Text(
-                                            'Open verification screen',
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(height: AppSpacing.md),
-                                    ],
-                                    if (widget.viewModel.error != null) ...[
-                                      _buildErrorCard(widget.viewModel.error!),
-                                      SizedBox(height: AppSpacing.md),
-                                    ],
-                                    _label(l10n.email),
-                                    _emailField(),
-                                    SizedBox(height: AppSpacing.md),
-                                    AnimatedCrossFade(
-                                      duration: const Duration(
-                                        milliseconds: 220,
-                                      ),
-                                      crossFadeState: _isLogin
-                                          ? CrossFadeState.showFirst
-                                          : CrossFadeState.showSecond,
-                                      firstChild: const SizedBox.shrink(),
-                                      secondChild: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          _label(l10n.username),
-                                          _usernameField(),
-                                          SizedBox(height: AppSpacing.md),
-                                        ],
-                                      ),
-                                    ),
-                                    _label(l10n.password),
-                                    _passwordField(),
-                                    AnimatedCrossFade(
-                                      duration: const Duration(
-                                        milliseconds: 220,
-                                      ),
-                                      crossFadeState: _isLogin
-                                          ? CrossFadeState.showFirst
-                                          : CrossFadeState.showSecond,
-                                      firstChild: const SizedBox.shrink(),
-                                      secondChild: Column(
-                                        children: [
-                                          SizedBox(height: AppSpacing.sm),
-                                          PasswordPolicySection(
-                                            password: _passwordController.text,
-                                            textColor: _textMuted,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    AnimatedCrossFade(
-                                      duration: const Duration(
-                                        milliseconds: 220,
-                                      ),
-                                      crossFadeState: _isLogin
-                                          ? CrossFadeState.showFirst
-                                          : CrossFadeState.showSecond,
-                                      firstChild: const SizedBox.shrink(),
-                                      secondChild: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          SizedBox(height: AppSpacing.md),
-                                          _label('Confirm Password'),
-                                          _confirmPasswordField(),
-                                          SizedBox(height: AppSpacing.xs),
-                                          _confirmPasswordFeedback(),
-                                        ],
-                                      ),
-                                    ),
-                                    if (_isLogin &&
-                                        pending == null &&
-                                        widget.viewModel.mfaRequired) ...[
-                                      SizedBox(height: AppSpacing.md),
-                                      _label('2FA Code'),
-                                      _mfaField(),
-                                    ],
-                                    if (_isLogin && pending == null) ...[
+                                        SizedBox(height: AppSpacing.md),
+                                      ],
+                                      _isLogin
+                                          ? _highlightHint('Welcome back')
+                                          : _sectionHint('Create your profile'),
                                       SizedBox(height: AppSpacing.sm),
-                                      CheckboxListTile(
-                                        dense: true,
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity:
-                                            ListTileControlAffinity.leading,
-                                        activeColor: _purpleStart,
-                                        value: _rememberMe,
-                                        onChanged: widget.viewModel.isLoading
-                                            ? null
-                                            : (value) async {
-                                                final next = value ?? false;
-                                                setState(
-                                                  () => _rememberMe = next,
-                                                );
-                                                if (!next) {
-                                                  await _syncRememberedCredentials();
-                                                }
-                                              },
-                                        title: Text(
-                                          'Remember me',
+                                      _label(l10n.email),
+                                      _emailField(),
+                                      SizedBox(height: AppSpacing.md),
+                                      AnimatedCrossFade(
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        crossFadeState: _isLogin
+                                            ? CrossFadeState.showFirst
+                                            : CrossFadeState.showSecond,
+                                        firstChild: const SizedBox.shrink(),
+                                        secondChild: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            _label(l10n.username),
+                                            _usernameField(),
+                                            SizedBox(height: AppSpacing.md),
+                                          ],
+                                        ),
+                                      ),
+                                      _label(l10n.password),
+                                      _passwordField(),
+                                      AnimatedCrossFade(
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        crossFadeState: _isLogin
+                                            ? CrossFadeState.showFirst
+                                            : CrossFadeState.showSecond,
+                                        firstChild: const SizedBox.shrink(),
+                                        secondChild: Column(
+                                          children: [
+                                            SizedBox(height: AppSpacing.sm),
+                                            PasswordPolicySection(
+                                              password:
+                                                  _passwordController.text,
+                                              textColor: _textMuted,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      AnimatedCrossFade(
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        crossFadeState: _isLogin
+                                            ? CrossFadeState.showFirst
+                                            : CrossFadeState.showSecond,
+                                        firstChild: const SizedBox.shrink(),
+                                        secondChild: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            SizedBox(height: AppSpacing.md),
+                                            _label('Confirm Password'),
+                                            _confirmPasswordField(),
+                                            SizedBox(height: AppSpacing.xs),
+                                            _confirmPasswordFeedback(),
+                                          ],
+                                        ),
+                                      ),
+                                      if (_isLogin &&
+                                          pending == null &&
+                                          widget.viewModel.mfaRequired) ...[
+                                        SizedBox(height: AppSpacing.md),
+                                        _label('2FA Code'),
+                                        _mfaField(),
+                                      ],
+                                      if (_isLogin && pending == null) ...[
+                                        SizedBox(height: AppSpacing.sm),
+                                        CheckboxListTile(
+                                          dense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                          controlAffinity:
+                                              ListTileControlAffinity.leading,
+                                          activeColor: _purpleStart,
+                                          value: _rememberMe,
+                                          onChanged: widget.viewModel.isLoading
+                                              ? null
+                                              : (value) async {
+                                                  final next = value ?? false;
+                                                  setState(
+                                                    () => _rememberMe = next,
+                                                  );
+                                                  if (!next) {
+                                                    await _syncRememberedCredentials();
+                                                  }
+                                                },
+                                          title: Text(
+                                            'Remember me',
+                                            style: TextStyle(
+                                              color: _textPrimaryColor,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (pending != null) ...[
+                                        SizedBox(height: AppSpacing.md),
+                                        _label('Verification Code'),
+                                        TextFormField(
+                                          controller:
+                                              _verificationCodeController,
+                                          keyboardType: TextInputType.number,
+                                          enabled: !widget.viewModel.isLoading,
                                           style: TextStyle(
                                             color: _textPrimaryColor,
-                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          decoration: _fieldDecoration(
+                                            hintText: '123456',
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                    if (pending != null) ...[
+                                      ],
+                                      SizedBox(height: AppSpacing.lg),
+                                      _submitButton(l10n, pending != null),
+                                      if (pending == null) ...[
+                                        SizedBox(height: AppSpacing.sm),
+                                        _socialLoginRow(),
+                                      ],
+                                      if (pending != null) ...[
+                                        SizedBox(height: AppSpacing.xs),
+                                        TextButton(
+                                          onPressed: widget.viewModel.isLoading
+                                              ? null
+                                              : () => widget.viewModel
+                                                    .resendVerificationCode(
+                                                      _emailController.text
+                                                          .trim(),
+                                                    ),
+                                          child: const Text('Resend code'),
+                                        ),
+                                      ],
                                       SizedBox(height: AppSpacing.md),
-                                      _label('Verification Code'),
-                                      TextFormField(
-                                        controller: _verificationCodeController,
-                                        keyboardType: TextInputType.number,
-                                        enabled: !widget.viewModel.isLoading,
-                                        style: TextStyle(
-                                          color: _textPrimaryColor,
-                                        ),
-                                        decoration: _fieldDecoration(
-                                          hintText: '123456',
-                                        ),
-                                      ),
-                                    ],
-                                    SizedBox(height: AppSpacing.lg),
-                                    _submitButton(l10n, pending != null),
-                                    if (pending == null) ...[
+                                      if (pending == null) _switchModeButton(),
                                       SizedBox(height: AppSpacing.sm),
-                                      _googleButton(),
+                                      _buildTfaStatus(),
                                     ],
-                                    if (pending != null) ...[
-                                      SizedBox(height: AppSpacing.xs),
-                                      TextButton(
-                                        onPressed: widget.viewModel.isLoading
-                                            ? null
-                                            : () => widget.viewModel
-                                                  .resendVerificationCode(
-                                                    _emailController.text
-                                                        .trim(),
-                                                  ),
-                                        child: const Text('Resend code'),
-                                      ),
-                                    ],
-                                    SizedBox(height: AppSpacing.md),
-                                    if (pending == null) _switchModeButton(),
-                                    SizedBox(height: AppSpacing.sm),
-                                    _buildTfaStatus(),
-                                  ],
+                                  ),
                                 ),
                               ),
                             );
                           },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 14,
+              left: 14,
+              child: SafeArea(
+                child: Builder(
+                  builder: (context) => Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => showAppSidebar(context),
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(child: _sidebarMenuIcon()),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 14,
+              right: 14,
+              child: SafeArea(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => themeController.toggle(),
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Center(
+                        child: Icon(
+                          isDarkMode
+                              ? Icons.light_mode_rounded
+                              : Icons.dark_mode_rounded,
+                          color: _textPrimaryColor,
                         ),
                       ),
                     ),
@@ -493,6 +515,9 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildHeader(bool isLogin) {
+    final width = MediaQuery.of(context).size.width;
+    final logoSize = width < 380 ? 64.0 : 76.0;
+    final subtitleSize = width < 380 ? 18.0 : 22.0;
     return Column(
       children: [
         TweenAnimationBuilder<double>(
@@ -501,39 +526,38 @@ class _LoginScreenState extends State<LoginScreen>
           curve: Curves.easeOutBack,
           builder: (_, scale, child) =>
               Transform.scale(scale: scale, child: child),
-          child: Container(
-            height: 76,
-            width: 76,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_purpleStart, _purpleEnd],
+          child: SizedBox(
+            height: logoSize,
+            width: logoSize,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                _isLightMode
+                    ? 'assets/images/logo_dark.png'
+                    : 'assets/images/logo_light.png',
+                fit: BoxFit.cover,
               ),
-            ),
-            child: const Icon(
-              Icons.music_note_rounded,
-              color: Colors.white,
-              size: 34,
             ),
           ),
         ),
         SizedBox(height: AppSpacing.md),
-        Text(
-          'Echo',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w700,
-            color: _textPrimaryColor,
+        Container(
+          width: 78,
+          height: 4,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: const LinearGradient(colors: [_purpleStart, _purpleEnd]),
           ),
         ),
-        SizedBox(height: AppSpacing.xs),
+        SizedBox(height: AppSpacing.md),
         Text(
           isLogin ? 'Sign in to your account' : 'Create your account',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _textMutedColor, fontSize: 22),
+          style: TextStyle(
+            color: _textPrimaryColor,
+            fontSize: subtitleSize,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     );
@@ -572,9 +596,17 @@ class _LoginScreenState extends State<LoginScreen>
     return TextFormField(
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
+      textInputAction: _isLogin ? TextInputAction.next : TextInputAction.next,
+      autofillHints: const [AutofillHints.email],
       enabled: !widget.viewModel.isLoading,
       style: TextStyle(color: _textPrimaryColor),
-      decoration: _fieldDecoration(hintText: 'you@example.com'),
+      decoration: _fieldDecoration(
+        hintText: 'you@example.com',
+        prefixIcon: const Icon(Icons.alternate_email_rounded),
+      ),
+      onFieldSubmitted: (_) {
+        FocusScope.of(context).nextFocus();
+      },
       validator: (value) {
         if (value == null || value.trim().isEmpty) return 'Email is required';
         if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim())) {
@@ -588,9 +620,17 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _usernameField() {
     return TextFormField(
       controller: _usernameController,
+      textInputAction: TextInputAction.next,
+      autofillHints: const [AutofillHints.username],
       enabled: !widget.viewModel.isLoading,
       style: TextStyle(color: _textPrimaryColor),
-      decoration: _fieldDecoration(hintText: 'your_username'),
+      decoration: _fieldDecoration(
+        hintText: 'your_username',
+        prefixIcon: const Icon(Icons.person_outline_rounded),
+      ),
+      onFieldSubmitted: (_) {
+        FocusScope.of(context).nextFocus();
+      },
       validator: (value) {
         if (_isLogin) {
           return null;
@@ -614,10 +654,13 @@ class _LoginScreenState extends State<LoginScreen>
       controller: _passwordController,
       obscureText: _obscurePassword,
       onChanged: (_) => setState(() {}),
+      textInputAction: _isLogin ? TextInputAction.done : TextInputAction.next,
+      autofillHints: const [AutofillHints.password],
       enabled: !widget.viewModel.isLoading,
       style: TextStyle(color: _textPrimaryColor),
       decoration: _fieldDecoration(
         hintText: '********',
+        prefixIcon: const Icon(Icons.lock_outline_rounded),
         suffixIcon: IconButton(
           onPressed: widget.viewModel.isLoading
               ? null
@@ -633,6 +676,13 @@ class _LoginScreenState extends State<LoginScreen>
           tooltip: _obscurePassword ? 'Show password' : 'Hide password',
         ),
       ),
+      onFieldSubmitted: (_) {
+        if (_isLogin) {
+          _submit();
+          return;
+        }
+        FocusScope.of(context).nextFocus();
+      },
       validator: (value) {
         if (value == null || value.isEmpty) return 'Password is required';
         if (!_isLogin) {
@@ -650,9 +700,14 @@ class _LoginScreenState extends State<LoginScreen>
     return TextFormField(
       controller: _mfaCodeController,
       keyboardType: TextInputType.number,
+      textInputAction: TextInputAction.done,
       enabled: !widget.viewModel.isLoading,
       style: TextStyle(color: _textPrimaryColor),
-      decoration: _fieldDecoration(hintText: '123456'),
+      decoration: _fieldDecoration(
+        hintText: '123456',
+        prefixIcon: const Icon(Icons.shield_outlined),
+      ),
+      onFieldSubmitted: (_) => _submit(),
       validator: (value) {
         if (!widget.viewModel.mfaRequired) return null;
         final code = value?.trim() ?? '';
@@ -669,10 +724,12 @@ class _LoginScreenState extends State<LoginScreen>
       controller: _confirmPasswordController,
       obscureText: _obscureConfirmPassword,
       onChanged: (_) => setState(() {}),
+      textInputAction: TextInputAction.done,
       enabled: !widget.viewModel.isLoading,
       style: TextStyle(color: _textPrimaryColor),
       decoration: _fieldDecoration(
         hintText: '********',
+        prefixIcon: const Icon(Icons.verified_user_outlined),
         suffixIcon: IconButton(
           onPressed: widget.viewModel.isLoading
               ? null
@@ -692,6 +749,7 @@ class _LoginScreenState extends State<LoginScreen>
               : 'Hide confirm password',
         ),
       ),
+      onFieldSubmitted: (_) => _submit(),
       validator: (value) {
         if (_isLogin) return null;
         if (value == null || value.isEmpty) {
@@ -734,18 +792,23 @@ class _LoginScreenState extends State<LoginScreen>
             ? null
             : (hasPending ? _verifyEmail : _submit),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF111827),
+          backgroundColor: _purpleEnd,
+          foregroundColor: Colors.white,
+          elevation: 8,
+          shadowColor: _purpleStart.withValues(alpha: 0.45),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         child: widget.viewModel.isLoading
             ? const SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
               )
             : Text(
                 hasPending
@@ -756,27 +819,173 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _googleButton() {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton.icon(
-        onPressed: widget.viewModel.isLoading
-            ? null
-            : widget.viewModel.loginWithGoogle,
-        icon: const Icon(Icons.g_mobiledata_rounded),
-        label: Text(_isLogin ? 'Sign in with Google' : 'Sign up with Google'),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: _isLightMode
-                ? const Color(0xFFCCD8EA)
-                : const Color(0xFF2D3A52),
+  Widget _socialLoginRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Divider(color: _themeChipBorder)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _highlightHint('Or continue with'),
+            ),
+            Expanded(child: Divider(color: _themeChipBorder)),
+          ],
+        ),
+        SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _socialTile(
+                label: 'Spotify',
+                onTap: widget.viewModel.isLoading
+                    ? null
+                    : widget.viewModel.connectWithSpotify,
+                child: _spotifyLogo(),
+              ),
+            ),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _socialTile(
+                label: 'SoundCloud',
+                onTap: widget.viewModel.isLoading
+                    ? null
+                    : widget.viewModel.loginWithSoundCloud,
+                child: _soundCloudLogo(),
+              ),
+            ),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _socialTile(
+                label: 'Apple',
+                onTap: widget.viewModel.isLoading
+                    ? null
+                    : widget.viewModel.loginWithApple,
+                child: _appleLogo(),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _socialTile({
+    required String label,
+    required Widget child,
+    required VoidCallback? onTap,
+  }) {
+    return Semantics(
+      button: true,
+      label: _isLogin ? 'Sign in with $label' : 'Sign up with $label',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          height: 124,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _themeChipBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: _isLightMode ? 0.06 : 0.22,
+                ),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+            ],
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _isLightMode
+                  ? const [Color(0xFFF9FBFF), Color(0xFFF0F5FE)]
+                  : const [Color(0xFF101722), Color(0xFF0A0F18)],
+            ),
           ),
-          foregroundColor: _textPrimaryColor,
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              child,
+              SizedBox(height: AppSpacing.xs),
+              Text(
+                label,
+                style: TextStyle(
+                  color: _textPrimaryColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _spotifyLogo() {
+    return Container(
+      width: _socialLogoSize,
+      height: _socialLogoSize,
+      decoration: const BoxDecoration(
+        color: Color(0xFF121212),
+        borderRadius: BorderRadius.all(
+          Radius.circular(_socialLogoCornerRadius),
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: _spotifyGreen,
+              shape: BoxShape.circle,
+            ),
+          ),
+          CustomPaint(
+            size: const Size(26, 17),
+            painter: _SpotifyGlyphPainter(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _appleLogo() {
+    return Container(
+      width: _socialLogoSize,
+      height: _socialLogoSize,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFF6B85), Color(0xFFE83D57)],
+        ),
+        borderRadius: BorderRadius.circular(_socialLogoCornerRadius),
+      ),
+      child: const Center(
+        child: Icon(Icons.apple, size: 28, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _soundCloudLogo() {
+    return Container(
+      width: _socialLogoSize,
+      height: _socialLogoSize,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFF9A1A), _soundCloudOrange],
+        ),
+        borderRadius: BorderRadius.circular(_socialLogoCornerRadius),
+      ),
+      child: const Center(
+        child: Icon(Icons.cloud_rounded, size: 28, color: Colors.white),
       ),
     );
   }
@@ -835,8 +1044,73 @@ class _LoginScreenState extends State<LoginScreen>
         text,
         style: TextStyle(
           color: _textPrimaryColor,
-          fontSize: 18,
+          fontSize: 15,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _sidebarMenuIcon() {
+    final lineColor = _isLightMode ? const Color(0xFF1A2233) : Colors.white;
+    Widget line(double width) => Container(
+      width: width,
+      height: 4,
+      decoration: BoxDecoration(
+        color: lineColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+    );
+
+    return SizedBox(
+      width: 24,
+      height: 18,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [line(12), line(16), line(22)],
+      ),
+    );
+  }
+
+  Widget _sectionHint(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: _textMutedColor,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  Widget _highlightHint(String text) {
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: _isLightMode
+              ? const Color(0xFFEAF0FF)
+              : const Color(0xFF1A2340),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: _isLightMode
+                ? const Color(0xFFC9D6F8)
+                : const Color(0xFF334A7A),
+          ),
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _isLightMode
+                ? const Color(0xFF243B76)
+                : const Color(0xFFDCE5FF),
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+          ),
         ),
       ),
     );
@@ -845,6 +1119,7 @@ class _LoginScreenState extends State<LoginScreen>
   InputDecoration _fieldDecoration({
     required String hintText,
     Widget? suffixIcon,
+    Widget? prefixIcon,
   }) {
     return InputDecoration(
       hintText: hintText,
@@ -853,24 +1128,52 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       filled: true,
       fillColor: _fieldBgColor,
+      prefixIcon: prefixIcon,
+      prefixIconColor: _isLightMode
+          ? const Color(0xFF55627A)
+          : const Color(0xFF95A4BD),
       suffixIcon: suffixIcon,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: _fieldBorderColor),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _purpleStart, width: 1.4),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _purpleEnd, width: 1.6),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: Color(0xFFE57373)),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: Color(0xFFE57373), width: 1.4),
       ),
     );
   }
+}
+
+class _SpotifyGlyphPainter extends CustomPainter {
+  const _SpotifyGlyphPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF121212)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 4.2;
+
+    final arc1 = Rect.fromLTWH(-2, 0, size.width + 6, size.height + 8);
+    final arc2 = Rect.fromLTWH(1, 6, size.width - 1, size.height + 2);
+    final arc3 = Rect.fromLTWH(4, 12, size.width - 9, size.height - 4);
+
+    canvas.drawArc(arc1, 3.95, 1.45, false, paint);
+    canvas.drawArc(arc2, 3.95, 1.38, false, paint);
+    canvas.drawArc(arc3, 3.95, 1.32, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

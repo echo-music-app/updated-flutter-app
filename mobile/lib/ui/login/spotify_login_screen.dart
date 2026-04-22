@@ -16,34 +16,43 @@ class SpotifyLoginScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.appTitle)),
-      body: Center(
-        child: ListenableBuilder(
-          listenable: viewModel,
-          builder: (context, _) {
-            if (viewModel.isLoading) {
-              return const CircularProgressIndicator();
-            }
-            return Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image(
-                    image: const AssetImage('assets/images/logo_light.png'),
-                    height: 120,
-                  ),
-                  SizedBox(height: AppSpacing.xl),
-                  Semantics(
-                    label: l10n.connectWithSpotify,
-                    child: ElevatedButton(
-                      onPressed: viewModel.connectWithSpotify,
-                      child: Text(l10n.connectWithSpotify),
+      body: SafeArea(
+        child: Center(
+          child: ListenableBuilder(
+            listenable: viewModel,
+            builder: (context, _) {
+              if (viewModel.isLoading) {
+                return const CircularProgressIndicator();
+              }
+              return Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image(
+                      image: const AssetImage('assets/images/logo_light.png'),
+                      height: 120,
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
+                    SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Connect your Spotify account to continue.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppSpacing.xl),
+                    Semantics(
+                      label: l10n.connectWithSpotify,
+                      child: FilledButton.icon(
+                        onPressed: viewModel.connectWithSpotify,
+                        icon: const Icon(Icons.music_note_rounded),
+                        label: Text(l10n.connectWithSpotify),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

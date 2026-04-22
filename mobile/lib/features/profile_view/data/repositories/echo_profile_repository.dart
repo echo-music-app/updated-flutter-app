@@ -217,6 +217,55 @@ class EchoProfileRepository implements ProfileRepository {
   }
 
   @override
+  Future<List<ProfilePostComment>> listPostComments(String postId) async {
+    try {
+      final response = await _getWithAuthRetry(
+        '$_echoBaseUrl/v1/posts/$postId/comments',
+      );
+      final raw = response.data as List<dynamic>? ?? const [];
+      return raw
+          .map((item) => item as Map<String, dynamic>)
+          .map(
+            (json) => ProfilePostComment(
+              id: json['id'] as String,
+              postId: json['post_id'] as String,
+              userId: json['user_id'] as String,
+              username: json['username'] as String? ?? 'Unknown',
+              content: json['content'] as String? ?? '',
+              createdAt: DateTime.parse(json['created_at'] as String),
+            ),
+          )
+          .toList(growable: false);
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
+  Future<ProfilePostComment> createPostComment(
+    String postId,
+    String content,
+  ) async {
+    try {
+      final response = await _postWithAuthRetry(
+        '$_echoBaseUrl/v1/posts/$postId/comments',
+        data: {'content': content},
+      );
+      final json = response.data as Map<String, dynamic>;
+      return ProfilePostComment(
+        id: json['id'] as String,
+        postId: json['post_id'] as String,
+        userId: json['user_id'] as String,
+        username: json['username'] as String? ?? 'You',
+        content: json['content'] as String? ?? content,
+        createdAt: DateTime.parse(json['created_at'] as String),
+      );
+    } on DioException catch (e) {
+      _translateError(e);
+    }
+  }
+
+  @override
   Future<ProfileHeader> updateOwnProfile({String? bio}) async {
     try {
       final response = await _patchWithAuthRetry(

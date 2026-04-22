@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/domain/models/spotify_session.dart';
 import 'package:mobile/domain/repositories/auth_repository.dart';
-import 'package:mobile/domain/repositories/spotify_auth_repository.dart';
 import 'package:mobile/ui/login/login_view_model.dart';
 import 'package:mobile/ui/login/spotify_login_screen.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
@@ -24,6 +22,11 @@ Widget _wrapWithMaterialApp(Widget child) {
 }
 
 class _FakeAuthRepository extends AuthRepository {
+  _FakeAuthRepository({FutureOr<void> Function()? onSpotifyLogin})
+    : _onSpotifyLogin = onSpotifyLogin;
+
+  final FutureOr<void> Function()? _onSpotifyLogin;
+
   @override
   bool get isAuthenticated => false;
 
@@ -82,44 +85,25 @@ class _FakeAuthRepository extends AuthRepository {
   }
 
   @override
-  Future<void> loginWithGoogle() {
+  Future<void> loginWithApple() {
     throw UnimplementedError();
   }
-}
-
-class _FakeSpotifyAuthRepository extends SpotifyAuthRepositoryInterface {
-  _FakeSpotifyAuthRepository({FutureOr<void> Function()? onStartAuth})
-    : _onStartAuth = onStartAuth;
-
-  final FutureOr<void> Function()? _onStartAuth;
 
   @override
-  bool get isAuthenticated => false;
-
-  @override
-  Future<void> startAuth() async {
-    if (_onStartAuth != null) await _onStartAuth();
+  Future<void> loginWithSoundCloud() {
+    throw UnimplementedError();
   }
 
   @override
-  Future<SpotifySession?> handleRedirect(Uri uri) async => null;
-
-  @override
-  Future<void> clearSession() async {}
-
-  @override
-  Future<String?> getAccessToken() {
-    throw UnimplementedError();
+  Future<void> loginWithSpotify() async {
+    if (_onSpotifyLogin != null) await _onSpotifyLogin();
   }
 }
 
 void main() {
   group('SpotifyLoginScreen', () {
     testWidgets('shows "Connect with Spotify" button', (tester) async {
-      final viewModel = LoginViewModel(
-        authRepository: _FakeAuthRepository(),
-        spotifyAuthRepository: _FakeSpotifyAuthRepository(),
-      );
+      final viewModel = LoginViewModel(authRepository: _FakeAuthRepository());
       await tester.pumpWidget(
         _wrapWithMaterialApp(SpotifyLoginScreen(viewModel: viewModel)),
       );
@@ -131,9 +115,8 @@ void main() {
     testWidgets('tap triggers startAuth callback', (tester) async {
       var pressed = false;
       final viewModel = LoginViewModel(
-        authRepository: _FakeAuthRepository(),
-        spotifyAuthRepository: _FakeSpotifyAuthRepository(
-          onStartAuth: () => pressed = true,
+        authRepository: _FakeAuthRepository(
+          onSpotifyLogin: () => pressed = true,
         ),
       );
       await tester.pumpWidget(
@@ -151,9 +134,8 @@ void main() {
     ) async {
       final authCompleter = Completer<void>();
       final viewModel = LoginViewModel(
-        authRepository: _FakeAuthRepository(),
-        spotifyAuthRepository: _FakeSpotifyAuthRepository(
-          onStartAuth: () => authCompleter.future,
+        authRepository: _FakeAuthRepository(
+          onSpotifyLogin: () => authCompleter.future,
         ),
       );
       await tester.pumpWidget(

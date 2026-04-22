@@ -21,6 +21,10 @@ class PlayerViewModel extends ChangeNotifier {
   String? get error =>
       _loadCmd.hasError ? (_loadCmd.result as Err).error.toString() : null;
 
+  void retry() {
+    _loadCmd.execute();
+  }
+
   Future<Result<void>> _loadFn() async {
     try {
       final queue = await _queueRepository.buildQueue();

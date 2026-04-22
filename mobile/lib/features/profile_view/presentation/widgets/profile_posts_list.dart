@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/features/profile_view/domain/entities/profile_posts_page.dart';
+import 'package:mobile/features/profile_view/presentation/profile_post_detail_screen.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 
 class ProfilePostsList extends StatelessWidget {
@@ -10,6 +11,8 @@ class ProfilePostsList extends StatelessWidget {
     required this.isLoadingMore,
     required this.onLoadMore,
     required this.onRetryLoadMore,
+    required this.onViewComments,
+    required this.onAddComment,
     this.hasLoadMoreError = false,
   });
 
@@ -18,6 +21,9 @@ class ProfilePostsList extends StatelessWidget {
   final bool isLoadingMore;
   final VoidCallback onLoadMore;
   final VoidCallback onRetryLoadMore;
+  final Future<List<ProfilePostComment>> Function(String postId) onViewComments;
+  final Future<ProfilePostComment?> Function(String postId, String content)
+  onAddComment;
   final bool hasLoadMoreError;
 
   @override
@@ -69,118 +75,138 @@ class ProfilePostsList extends StatelessWidget {
               final spotifyAttachment = _firstSpotifyAttachment(
                 post.attachments,
               );
-              return Container(
+              return InkWell(
                 key: ValueKey(post.id),
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: const Color(0xFFE5E7EB),
-                          child: Text(
-                            post.userId.isNotEmpty
-                                ? post.userId[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              color: Color(0xFF111827),
-                              fontWeight: FontWeight.w700,
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _openPostDetail(context, post, posts, index),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: borderColor),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x22000000),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: const Color(0xFFE5E7EB),
+                            child: Text(
+                              post.userId.isNotEmpty
+                                  ? post.userId[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                color: Color(0xFF111827),
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'User ${_safeShortId(post.userId)}',
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: titleTextColor,
-                                  fontWeight: FontWeight.w700,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'User ${_safeShortId(post.userId)}',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: titleTextColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                _humanDate(post.createdAt),
+                                Text(
+                                  _humanDate(post.createdAt),
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: mutedTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.more_vert, color: Color(0xFF6B7280)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _privacyCaption(post.privacy),
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: bodyTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (textAttachment != null)
+                        Text(
+                          textAttachment.content!,
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: bodyTextColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      if (spotifyAttachment != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.music_note_rounded, size: 18),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                spotifyAttachment.url!,
                                 style: textTheme.bodySmall?.copyWith(
                                   color: mutedTextColor,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const Icon(Icons.more_vert, color: Color(0xFF6B7280)),
                       ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _privacyCaption(post.privacy),
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: bodyTextColor,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (textAttachment != null)
-                      Text(
-                        textAttachment.content!,
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: bodyTextColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    if (spotifyAttachment != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.music_note_rounded, size: 18),
-                          const SizedBox(width: 6),
-                          Expanded(
+                      if (textAttachment == null && spotifyAttachment == null)
+                        Container(
+                          height: 72,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: isLight
+                                ? const Color(0xFFF3F4F6)
+                                : const Color(0xFF2D3442),
+                          ),
+                          child: Center(
                             child: Text(
-                              spotifyAttachment.url!,
-                              style: textTheme.bodySmall?.copyWith(
+                              'Post created',
+                              style: textTheme.bodyMedium?.copyWith(
                                 color: mutedTextColor,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ],
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${post.attachments.length} attachment(s)',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: mutedTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _openCommentsSheet(context, post),
+                          icon: const Icon(Icons.mode_comment_outlined, size: 18),
+                          label: const Text('Comments'),
+                        ),
                       ),
                     ],
-                    if (textAttachment == null && spotifyAttachment == null)
-                      Container(
-                        height: 72,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: isLight
-                              ? const Color(0xFFF3F4F6)
-                              : const Color(0xFF2D3442),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Post created',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: mutedTextColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${post.attachments.length} attachment(s)',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: mutedTextColor,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               );
             },
@@ -208,6 +234,24 @@ class ProfilePostsList extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Future<void> _openPostDetail(
+    BuildContext context,
+    ProfilePostSummary post,
+    List<ProfilePostSummary> allPosts,
+    int initialIndex,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ProfilePostDetailScreen(
+          posts: allPosts,
+          initialIndex: initialIndex,
+          loadComments: onViewComments,
+          addComment: onAddComment,
+        ),
+      ),
     );
   }
 
@@ -249,6 +293,72 @@ class ProfilePostsList extends StatelessWidget {
     }
     return null;
   }
+
+  Future<void> _openCommentsSheet(
+    BuildContext context,
+    ProfilePostSummary post,
+  ) async {
+    final comments = await onViewComments(post.id);
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Comments',
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (comments.isEmpty)
+                Text(
+                  'No comments yet.',
+                  style: Theme.of(sheetContext).textTheme.bodyMedium,
+                )
+              else
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: comments.length,
+                    separatorBuilder: (_, index) =>
+                        const Divider(height: 16),
+                    itemBuilder: (context, index) {
+                      final comment = comments[index];
+                      return Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '${comment.username}: ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(text: comment.content),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _DemoSongPostCard extends StatelessWidget {
@@ -274,8 +384,15 @@ class _DemoSongPostCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

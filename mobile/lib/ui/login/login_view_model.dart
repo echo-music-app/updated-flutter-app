@@ -1,15 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:mobile/domain/repositories/auth_repository.dart';
-import 'package:mobile/domain/repositories/spotify_auth_repository.dart';
 import 'package:mobile/utils/command.dart';
 import 'package:mobile/utils/result.dart';
 
 class LoginViewModel extends ChangeNotifier {
-  LoginViewModel({
-    required AuthRepository authRepository,
-    SpotifyAuthRepositoryInterface? spotifyAuthRepository,
-  }) : _auth = authRepository,
-       _spotifyAuth = spotifyAuthRepository {
+  LoginViewModel({required AuthRepository authRepository})
+    : _auth = authRepository {
     _loginCmd =
         Command1<void, ({String email, String password, String? mfaCode})>(
           _loginFn,
@@ -19,7 +15,8 @@ class LoginViewModel extends ChangeNotifier {
           _registerFn,
         );
     _connectCmd = Command0<void>(_connectFn);
-    _googleCmd = Command0<void>(_googleFn);
+    _appleCmd = Command0<void>(_appleFn);
+    _soundCloudCmd = Command0<void>(_soundCloudFn);
     _verifyEmailCmd = Command1<void, ({String email, String code})>(
       _verifyEmailFn,
     );
@@ -27,19 +24,20 @@ class LoginViewModel extends ChangeNotifier {
     _loginCmd.addListener(notifyListeners);
     _registerCmd.addListener(notifyListeners);
     _connectCmd.addListener(notifyListeners);
-    _googleCmd.addListener(notifyListeners);
+    _appleCmd.addListener(notifyListeners);
+    _soundCloudCmd.addListener(notifyListeners);
     _verifyEmailCmd.addListener(notifyListeners);
     _resendVerificationCmd.addListener(notifyListeners);
   }
 
   final AuthRepository _auth;
-  final SpotifyAuthRepositoryInterface? _spotifyAuth;
   late final Command1<void, ({String email, String password, String? mfaCode})>
   _loginCmd;
   late final Command1<void, ({String email, String username, String password})>
   _registerCmd;
   late final Command0<void> _connectCmd;
-  late final Command0<void> _googleCmd;
+  late final Command0<void> _appleCmd;
+  late final Command0<void> _soundCloudCmd;
   late final Command1<void, ({String email, String code})> _verifyEmailCmd;
   late final Command1<void, String> _resendVerificationCmd;
 
@@ -55,7 +53,8 @@ class LoginViewModel extends ChangeNotifier {
       _loginCmd.running ||
       _registerCmd.running ||
       _connectCmd.running ||
-      _googleCmd.running ||
+      _appleCmd.running ||
+      _soundCloudCmd.running ||
       _verifyEmailCmd.running ||
       _resendVerificationCmd.running;
 
@@ -67,7 +66,10 @@ class LoginViewModel extends ChangeNotifier {
     if (_connectCmd.hasError) {
       return (_connectCmd.result as Err).error.toString();
     }
-    if (_googleCmd.hasError) return (_googleCmd.result as Err).error.toString();
+    if (_appleCmd.hasError) return (_appleCmd.result as Err).error.toString();
+    if (_soundCloudCmd.hasError) {
+      return (_soundCloudCmd.result as Err).error.toString();
+    }
     if (_verifyEmailCmd.hasError) {
       return (_verifyEmailCmd.result as Err).error.toString();
     }
@@ -91,7 +93,8 @@ class LoginViewModel extends ChangeNotifier {
       ));
 
   Future<void> connectWithSpotify() => _connectCmd.execute();
-  Future<void> loginWithGoogle() => _googleCmd.execute();
+  Future<void> loginWithApple() => _appleCmd.execute();
+  Future<void> loginWithSoundCloud() => _soundCloudCmd.execute();
   Future<void> verifyEmail(String email, String code) =>
       _verifyEmailCmd.execute((email: email, code: code));
   Future<void> resendVerificationCode(String email) =>
@@ -140,16 +143,27 @@ class LoginViewModel extends ChangeNotifier {
 
   Future<Result<void>> _connectFn() async {
     try {
-      await _spotifyAuth?.startAuth();
+      await _auth.loginWithSpotify();
       return Result.ok(null);
     } on Exception catch (e) {
       return Result.error(e);
     }
   }
 
-  Future<Result<void>> _googleFn() async {
+  Future<Result<void>> _appleFn() async {
     try {
-      await _auth.loginWithGoogle();
+      await _auth.loginWithApple();
+      _pendingVerification = null;
+      _mfaRequired = false;
+      return Result.ok(null);
+    } on Exception catch (e) {
+      return Result.error(e);
+    }
+  }
+
+  Future<Result<void>> _soundCloudFn() async {
+    try {
+      await _auth.loginWithSoundCloud();
       _pendingVerification = null;
       _mfaRequired = false;
       return Result.ok(null);
@@ -184,7 +198,8 @@ class LoginViewModel extends ChangeNotifier {
     _loginCmd.removeListener(notifyListeners);
     _registerCmd.removeListener(notifyListeners);
     _connectCmd.removeListener(notifyListeners);
-    _googleCmd.removeListener(notifyListeners);
+    _appleCmd.removeListener(notifyListeners);
+    _soundCloudCmd.removeListener(notifyListeners);
     _verifyEmailCmd.removeListener(notifyListeners);
     _resendVerificationCmd.removeListener(notifyListeners);
     super.dispose();

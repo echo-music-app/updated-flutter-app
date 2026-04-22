@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     app_name: str = "Echo"
     app_base_url: str = "http://localhost:8000"
     cors_allowed_origins: Annotated[list[str], NoDecode] = []
-    google_client_ids: Annotated[list[str], NoDecode] = []
+    apple_client_ids: Annotated[list[str], NoDecode] = []
 
     smtp_host: str = ""
     smtp_port: int = 587
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     cloudfront_key_pair_id: str = "dev-key-pair"
     cloudfront_private_key: SecretStr = SecretStr("dev-cloudfront-secret")
 
-    @field_validator("cors_allowed_origins", "google_client_ids", mode="before")
+    @field_validator("cors_allowed_origins", "apple_client_ids", mode="before")
     @classmethod
     def parse_string_list(cls, value: object) -> list[str]:
         if value is None or value == "":

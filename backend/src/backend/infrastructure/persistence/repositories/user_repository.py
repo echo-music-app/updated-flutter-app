@@ -13,8 +13,12 @@ class SqlAlchemyUserRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_google_subject(self, google_subject: str) -> User | None:
-        result = await self._session.execute(select(User).where(User.google_subject == google_subject))
+    async def get_by_apple_subject(self, apple_subject: str) -> User | None:
+        result = await self._session.execute(select(User).where(User.apple_subject == apple_subject))
+        return result.scalar_one_or_none()
+
+    async def get_by_soundcloud_subject(self, soundcloud_subject: str) -> User | None:
+        result = await self._session.execute(select(User).where(User.soundcloud_subject == soundcloud_subject))
         return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> User | None:
@@ -73,17 +77,35 @@ class SqlAlchemyUserRepository:
         user.status = UserStatus.active
         return user
 
-    async def link_google_account(
+    async def link_apple_account(
         self,
         user_id: uuid.UUID,
         *,
-        google_subject: str,
+        apple_subject: str,
         verified_at: datetime,
     ) -> User | None:
         user = await self.get_by_id(user_id)
         if user is None:
             return None
-        user.google_subject = google_subject
+        user.apple_subject = apple_subject
+        user.email_verified_at = verified_at
+        user.email_verification_code_hash = None
+        user.email_verification_expires_at = None
+        user.email_verification_sent_at = verified_at
+        user.status = UserStatus.active
+        return user
+
+    async def link_soundcloud_account(
+        self,
+        user_id: uuid.UUID,
+        *,
+        soundcloud_subject: str,
+        verified_at: datetime,
+    ) -> User | None:
+        user = await self.get_by_id(user_id)
+        if user is None:
+            return None
+        user.soundcloud_subject = soundcloud_subject
         user.email_verified_at = verified_at
         user.email_verification_code_hash = None
         user.email_verification_expires_at = None

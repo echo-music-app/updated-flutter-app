@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile/ui/home/home_view_model.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
 import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
+import 'package:mobile/ui/home/home_view_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, required this.viewModel});
@@ -28,9 +28,18 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListenableBuilder(
-        listenable: viewModel,
-        builder: (context, _) => _buildBody(context, l10n),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)],
+          ),
+        ),
+        child: ListenableBuilder(
+          listenable: viewModel,
+          builder: (context, _) => _buildBody(context, l10n),
+        ),
       ),
       bottomNavigationBar: const AppBottomNavBar(
         currentTab: AppBottomNavTab.home,
@@ -43,44 +52,59 @@ class HomeScreen extends StatelessWidget {
       case HomeScreenState.loading:
         return const Center(child: CircularProgressIndicator());
       case HomeScreenState.empty:
-        return Center(child: Text(l10n.emptyMessage));
+        return Center(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(l10n.emptyMessage),
+            ),
+          ),
+        );
       case HomeScreenState.error:
         return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.errorMessage),
-              SizedBox(height: AppSpacing.md),
-              Semantics(
-                label: l10n.retryButton,
-                child: ElevatedButton(
-                  onPressed: viewModel.loadFeed,
-                  child: Text(l10n.retryButton),
-                ),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l10n.errorMessage),
+                  const SizedBox(height: AppSpacing.md),
+                  Semantics(
+                    label: l10n.retryButton,
+                    child: ElevatedButton(
+                      onPressed: viewModel.loadFeed,
+                      child: Text(l10n.retryButton),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       case HomeScreenState.data:
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            AppSpacing.lg,
+        return RefreshIndicator(
+          onRefresh: viewModel.loadFeed,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.lg,
+            ),
+            itemCount: viewModel.posts.length,
+            separatorBuilder: (context, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final post = viewModel.posts[index];
+              return _FeedPostCard(
+                post: post,
+                onToggleLike: () => viewModel.toggleLike(post.id),
+                onLoadComments: () => viewModel.loadComments(post.id),
+                onAddComment: (text) => viewModel.addComment(post.id, text),
+              );
+            },
           ),
-          itemCount: viewModel.posts.length,
-          separatorBuilder: (context, _) =>
-              const Divider(height: AppSpacing.xl),
-          itemBuilder: (context, index) {
-            final post = viewModel.posts[index];
-            return _FeedPostCard(
-              post: post,
-              onToggleLike: () => viewModel.toggleLike(post.id),
-              onLoadComments: () => viewModel.loadComments(post.id),
-              onAddComment: (text) => viewModel.addComment(post.id, text),
-            );
-          },
         );
     }
   }
@@ -109,159 +133,177 @@ class _FeedPostCard extends StatelessWidget {
       context,
     ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700);
     final subtleTextColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final cardColor = Theme.of(context).brightness == Brightness.light
+        ? Colors.white
+        : const Color(0xFF1E232D);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundImage: post.userAvatarUrl != null
-                  ? NetworkImage(post.userAvatarUrl!)
-                  : null,
-              backgroundColor: _seedColor(post.userId, shift: 0),
-              child: post.userAvatarUrl == null
-                  ? Text(
-                      post.userInitials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundImage: post.userAvatarUrl != null
+                      ? NetworkImage(post.userAvatarUrl!)
+                      : null,
+                  backgroundColor: _seedColor(post.userId, shift: 0),
+                  child: post.userAvatarUrl == null
+                      ? Text(
+                          post.userInitials,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        button: true,
+                        label: 'Open ${post.userName} profile',
+                        child: InkWell(
+                          onTap: () => _openAuthorProfile(context),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 2,
+                              vertical: 1,
+                            ),
+                            child: Text(post.userName, style: titleStyle),
+                          ),
+                        ),
                       ),
-                    )
-                  : null,
+                      Row(
+                        children: [
+                          Text(
+                            post.userHandle,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              color: subtleTextColor,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _PrivacyBadge(privacy: post.privacy),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
+            if (post.spotifyUrl != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Semantics(
-                    button: true,
-                    label: 'Open ${post.userName} profile',
-                    child: InkWell(
-                      onTap: () => _openAuthorProfile(context),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 1,
-                        ),
-                        child: Text(post.userName, style: titleStyle),
-                      ),
-                    ),
+                  _TrackArt(
+                    topColor: _seedColor(post.id, shift: 11),
+                    bottomColor: _seedColor(post.id, shift: 19),
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        post.userHandle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: subtleTextColor,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _spotifyTitle(post.spotifyUrl!),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      _PrivacyBadge(privacy: post.privacy),
-                    ],
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Spotify',
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(color: subtleTextColor),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          onPressed: () {},
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: const Text('Spotify'),
+                        ),
+                        Text(
+                          _spotifyLabel(post.spotifyUrl!),
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: subtleTextColor),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-        if (post.spotifyUrl != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _TrackArt(
-                topColor: _seedColor(post.id, shift: 11),
-                bottomColor: _seedColor(post.id, shift: 19),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _spotifyTitle(post.spotifyUrl!),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Spotify',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyLarge?.copyWith(color: subtleTextColor),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      onPressed: () {},
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Spotify'),
-                    ),
-                    Text(
-                      _spotifyLabel(post.spotifyUrl!),
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: subtleTextColor),
-                    ),
-                  ],
-                ),
-              ),
             ],
-          ),
-        ],
-        if (post.text != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(post.text!, style: Theme.of(context).textTheme.bodyLarge),
-        ],
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            TextButton.icon(
-              onPressed: () => onToggleLike(),
-              icon: Icon(
-                post.currentUserLiked
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                color: post.currentUserLiked
-                    ? Theme.of(context).colorScheme.error
-                    : null,
-              ),
-              label: Text(post.currentUserLiked ? 'Liked' : 'Like'),
+            if (post.text != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(post.text!, style: Theme.of(context).textTheme.bodyLarge),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () => onToggleLike(),
+                  icon: Icon(
+                    post.currentUserLiked
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: post.currentUserLiked
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                  ),
+                  label: Text(post.currentUserLiked ? 'Liked' : 'Like'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                TextButton.icon(
+                  onPressed: () => _openCommentsSheet(context),
+                  icon: const Icon(Icons.mode_comment_outlined),
+                  label: const Text('Comment'),
+                ),
+                const Spacer(),
+                Text(
+                  '${post.likeCount} likes | ${post.commentCount} comments',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: subtleTextColor),
+                ),
+              ],
             ),
-            const SizedBox(width: AppSpacing.sm),
-            TextButton.icon(
-              onPressed: () => _openCommentsSheet(context),
-              icon: const Icon(Icons.mode_comment_outlined),
-              label: const Text('Comment'),
-            ),
-            const Spacer(),
-            Text(
-              '${post.likeCount} likes • ${post.commentCount} comments',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: subtleTextColor),
-            ),
-          ],
-        ),
-        if (post.comments.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          ...post.comments
-              .take(2)
-              .map(
+            if (post.comments.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              ...post.comments.take(2).map(
                 (comment) => Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text.rich(
@@ -279,8 +321,10 @@ class _FeedPostCard extends StatelessWidget {
                   ),
                 ),
               ),
-        ],
-      ],
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -293,12 +337,14 @@ class _FeedPostCard extends StatelessWidget {
       isScrollControlled: true,
       builder: (sheetContext) {
         final comments = [...initialComments];
+
         void submitComment(String rawValue) {
           final text = rawValue.trim();
           if (text.isEmpty) return;
           if (!sheetContext.mounted) return;
           Navigator.of(sheetContext).pop(text);
         }
+
         return Padding(
           padding: EdgeInsets.only(
             left: AppSpacing.md,
@@ -328,8 +374,7 @@ class _FeedPostCard extends StatelessWidget {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: comments.length,
-                    separatorBuilder: (_, index) =>
-                        const Divider(height: 16),
+                    separatorBuilder: (_, index) => const Divider(height: 16),
                     itemBuilder: (context, index) {
                       final comment = comments[index];
                       return Text.rich(
@@ -337,9 +382,7 @@ class _FeedPostCard extends StatelessWidget {
                           children: [
                             TextSpan(
                               text: '${comment.authorName}: ',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: const TextStyle(fontWeight: FontWeight.w700),
                             ),
                             TextSpan(text: comment.text),
                           ],
@@ -412,17 +455,17 @@ class _TrackArt extends StatelessWidget {
           colors: [topColor, bottomColor],
         ),
       ),
-      child: SizedBox(
+      child: const SizedBox(
         height: 92,
         width: 92,
         child: Center(
           child: DecoratedBox(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white24,
               shape: BoxShape.circle,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(8),
               child: Icon(
                 Icons.play_arrow_rounded,
                 color: Colors.white,

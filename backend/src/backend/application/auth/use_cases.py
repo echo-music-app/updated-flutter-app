@@ -14,18 +14,19 @@ from backend.core.security import (
     verify_password,
     verify_totp_code,
 )
-from backend.domain.auth.entities import GoogleIdentity, RegistrationResult, TokenPair, VerificationDispatch
+from backend.domain.auth.entities import AppleIdentity, RegistrationResult, SoundCloudIdentity, TokenPair, VerificationDispatch
 from backend.domain.auth.exceptions import (
     AccountDisabledError,
+    AppleAccountConflictError,
     EmailNotVerifiedError,
     EmailTakenError,
-    GoogleAccountConflictError,
     InvalidCredentialsError,
     InvalidMfaCodeError,
     InvalidTokenError,
     InvalidVerificationCodeError,
     MfaNotConfiguredError,
     MfaRequiredError,
+    SoundCloudAccountConflictError,
     UsernameTakenError,
 )
 from backend.domain.auth.repositories import ITokenRepository, IUserRepository
@@ -108,21 +109,21 @@ class AuthUseCases:
             raise InvalidMfaCodeError("Invalid MFA code")
         await self._user_repo.disable_mfa(user_id)
 
-    async def login_with_google(self, identity: GoogleIdentity) -> TokenPair:
+    async def login_with_apple(self, identity: AppleIdentity) -> TokenPair:
         if not identity.email_verified:
-            raise InvalidCredentialsError("Google account email is not verified")
+            raise InvalidCredentialsError("Apple account email is not verified")
 
         now = datetime.now(UTC)
-        user = await self._user_repo.get_by_google_subject(identity.subject)
+        user = await self._user_repo.get_by_apple_subject(identity.subject)
         if user is None:
             user = await self._user_repo.get_by_email(identity.email)
             if user is not None:
-                if user.google_subject not in (None, identity.subject):
-                    raise GoogleAccountConflictError("This email is already linked to a different Google account")
+                if user.apple_subject not in (None, identity.subject):
+                    raise AppleAccountConflictError("This email is already linked to a different Apple account")
                 await self._ensure_account_enabled(user)
-                linked_user = await self._user_repo.link_google_account(
+                linked_user = await self._user_repo.link_apple_account(
                     user.id,
-                    google_subject=identity.subject,
+                    apple_subject=identity.subject,
                     verified_at=now,
                 )
                 if linked_user is not None:
@@ -134,9 +135,43 @@ class AuthUseCases:
                     username,
                     hash_password(str(uuid.uuid4())),
                 )
-                linked_user = await self._user_repo.link_google_account(
+                linked_user = await self._user_repo.link_apple_account(
                     user.id,
-                    google_subject=identity.subject,
+                    apple_subject=identity.subject,
+                    verified_at=now,
+                )
+                if linked_user is not None:
+                    user = linked_user
+
+        await self._ensure_account_enabled(user)
+        return await self._issue_tokens(user.id, now)
+
+    async def login_with_soundcloud(self, identity: SoundCloudIdentity) -> TokenPair:
+        now = datetime.now(UTC)
+        user = await self._user_repo.get_by_soundcloud_subject(identity.subject)
+        if user is None:
+            user = await self._user_repo.get_by_email(identity.email)
+            if user is not None:
+                if user.soundcloud_subject not in (None, identity.subject):
+                    raise SoundCloudAccountConflictError("This email is already linked to a different SoundCloud account")
+                await self._ensure_account_enabled(user)
+                linked_user = await self._user_repo.link_soundcloud_account(
+                    user.id,
+                    soundcloud_subject=identity.subject,
+                    verified_at=now,
+                )
+                if linked_user is not None:
+                    user = linked_user
+            else:
+                username = await self._generate_available_username(identity.email)
+                user = await self._user_repo.create(
+                    identity.email,
+                    username,
+                    hash_password(str(uuid.uuid4())),
+                )
+                linked_user = await self._user_repo.link_soundcloud_account(
+                    user.id,
+                    soundcloud_subject=identity.subject,
                     verified_at=now,
                 )
                 if linked_user is not None:

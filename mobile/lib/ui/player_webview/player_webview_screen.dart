@@ -60,20 +60,22 @@ class PlayerWebViewScreen extends StatelessWidget {
   }
 
   Widget _buildData(BuildContext context, AppLocalizations l10n) {
-    return Column(
-      children: [
-        const WebViewLimitationBanner(),
-        Expanded(
-          child: viewModel.currentTrack == null
-              ? const Center(child: CircularProgressIndicator())
-              : SpotifyIframeWidget(
-                  trackId: viewModel.currentTrack!.id,
-                  onLoaded: viewModel.onIframeLoaded,
-                  onError: viewModel.onIframeError,
-                ),
-        ),
-        _buildQueueControls(l10n),
-      ],
+    return SafeArea(
+      child: Column(
+        children: [
+          const WebViewLimitationBanner(),
+          Expanded(
+            child: viewModel.currentTrack == null
+                ? const Center(child: CircularProgressIndicator())
+                : SpotifyIframeWidget(
+                    trackId: viewModel.currentTrack!.id,
+                    onLoaded: viewModel.onIframeLoaded,
+                    onError: viewModel.onIframeError,
+                  ),
+          ),
+          _buildQueueControls(l10n),
+        ],
+      ),
     );
   }
 

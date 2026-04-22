@@ -18,8 +18,7 @@ dependencies = [
     "uuid6>=2025.0.1",
     "httpx>=0.28.1",
     "cryptography>=44.0.0",
-    "google-auth>=2.39.0",
-    "requests>=2.32.3",
+    "pyjwt[crypto]>=2.10.1",
 ]
 
 [build-system]

@@ -67,8 +67,8 @@ class SpotifyClient:
             raise SpotifyAuthError(f"Spotify token exchange failed: {resp.status_code}")
         return resp.json()
 
-    async def get_user_profile(self, access_token: str) -> str:
-        """Fetch Spotify user profile and return the user ID."""
+    async def get_user_profile(self, access_token: str) -> dict:
+        """Fetch Spotify user profile and return basic identity fields."""
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             resp = await client.get(
                 SPOTIFY_USER_URL,
@@ -76,7 +76,12 @@ class SpotifyClient:
             )
         if resp.status_code != 200:
             raise SpotifyAuthError(f"Failed to fetch Spotify user profile: {resp.status_code}")
-        return resp.json()["id"]
+        data = resp.json()
+        return {
+            "id": data.get("id"),
+            "email": data.get("email"),
+            "display_name": data.get("display_name"),
+        }
 
     async def refresh_token(self, encrypted_refresh_token: bytes) -> dict:
         """Refresh Spotify access token using the stored (encrypted) refresh token. Returns token data dict."""

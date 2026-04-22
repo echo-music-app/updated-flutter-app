@@ -80,7 +80,19 @@ class _FakeAuthRepository extends AuthRepository {
   }
 
   @override
-  Future<void> loginWithGoogle() async {
+  Future<void> loginWithSpotify() async {
+    _isAuthenticated = true;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> loginWithApple() async {
+    _isAuthenticated = true;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> loginWithSoundCloud() async {
     _isAuthenticated = true;
     notifyListeners();
   }

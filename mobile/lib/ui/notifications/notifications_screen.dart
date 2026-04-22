@@ -29,9 +29,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         leading: const AppTopNavLeading(),
         title: const Text('Notifications'),
       ),
-      body: ListenableBuilder(
-        listenable: widget.viewModel,
-        builder: (context, _) => _buildBody(context),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)],
+          ),
+        ),
+        child: ListenableBuilder(
+          listenable: widget.viewModel,
+          builder: (context, _) => _buildBody(context),
+        ),
       ),
       bottomNavigationBar: const AppBottomNavBar(),
     );
@@ -42,33 +51,57 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationsState.loading:
         return const Center(child: CircularProgressIndicator());
       case NotificationsState.empty:
-        return const Center(child: Text('No notifications right now.'));
-      case NotificationsState.error:
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Could not load notifications.'),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: widget.viewModel.load,
-                child: const Text('Retry'),
+        return RefreshIndicator(
+          onRefresh: widget.viewModel.load,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: const [
+              Card(
+                child: SizedBox(
+                  height: 220,
+                  child: Center(child: Text('No notifications right now.')),
+                ),
               ),
             ],
           ),
         );
+      case NotificationsState.error:
+        return Center(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Could not load notifications.'),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: widget.viewModel.load,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       case NotificationsState.authRequired:
         return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Session expired. Please login again.'),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () => context.go(Routes.login),
-                child: const Text('Go to login'),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Session expired. Please login again.'),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () => context.go(Routes.login),
+                    child: const Text('Go to login'),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       case NotificationsState.data:
@@ -82,16 +115,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ),
             ...widget.viewModel.activities.map(
-              (activity) => ListTile(
-                leading: CircleAvatar(
-                  child: Text(
-                    activity.actorUsername.isEmpty
-                        ? '?'
-                        : activity.actorUsername[0].toUpperCase(),
-                  ),
-                ),
-                title: Text(activity.actorUsername),
-                subtitle: Text(_activitySubtitle(activity)),
+              (activity) => _NotificationCard(
+                leadingText: activity.actorUsername,
+                title: activity.actorUsername,
+                subtitle: _activitySubtitle(activity),
               ),
             ),
           ],
@@ -104,16 +131,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ),
             ...widget.viewModel.requests.map(
-              (request) => ListTile(
-                leading: CircleAvatar(
-                  child: Text(
-                    request.requesterUsername.isEmpty
-                        ? '?'
-                        : request.requesterUsername[0].toUpperCase(),
-                  ),
-                ),
-                title: Text(request.requesterUsername),
-                subtitle: const Text('Sent you a follow request'),
+              (request) => _NotificationCard(
+                leadingText: request.requesterUsername,
+                title: request.requesterUsername,
+                subtitle: 'Sent you a follow request',
                 trailing: FilledButton(
                   onPressed: widget.viewModel.isProcessing
                       ? null
@@ -125,10 +146,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ];
 
-        return ListView.separated(
-          itemCount: items.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, index) => items[index],
+        return RefreshIndicator(
+          onRefresh: widget.viewModel.load,
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, index) => items[index],
+          ),
         );
     }
   }
@@ -154,5 +180,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return 'Commented on your post';
     }
     return 'Liked your post';
+  }
+}
+
+class _NotificationCard extends StatelessWidget {
+  const _NotificationCard({
+    required this.leadingText,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+  });
+
+  final String leadingText;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF1E232D),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          child: Text(
+            leadingText.isEmpty ? '?' : leadingText[0].toUpperCase(),
+          ),
+        ),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: trailing,
+      ),
+    );
   }
 }

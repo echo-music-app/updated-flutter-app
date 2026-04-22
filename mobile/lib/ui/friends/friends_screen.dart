@@ -21,10 +21,19 @@ class FriendsScreen extends StatefulWidget {
 }
 
 class _FriendsScreenState extends State<FriendsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
     widget.viewModel.load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -115,38 +124,83 @@ class _FriendsScreenState extends State<FriendsScreen> {
           ),
         );
       case FriendsState.data:
+        final filteredFriends = widget.viewModel.friends.where((friend) {
+          final q = _query.trim().toLowerCase();
+          if (q.isEmpty) return true;
+          return friend.username.toLowerCase().contains(q);
+        }).toList(growable: false);
         return RefreshIndicator(
           onRefresh: widget.viewModel.load,
-          child: ListView.separated(
+          child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: widget.viewModel.friends.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final friend = widget.viewModel.friends[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: friend.avatarUrl != null
-                      ? NetworkImage(friend.avatarUrl!)
-                      : null,
-                  child: friend.avatarUrl == null
-                      ? Text(
-                          friend.username.isNotEmpty
-                              ? friend.username[0].toUpperCase()
-                              : '?',
-                        )
-                      : null,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            children: [
+              TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: widget.listType == FriendListType.followers
+                      ? 'Search followers'
+                      : 'Search following',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          tooltip: 'Clear',
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
                 ),
-                title: Text(friend.username),
-                subtitle: Text(
-                  widget.listType == FriendListType.followers
-                      ? 'Follower'
-                      : 'Following',
+                onChanged: (value) => setState(() => _query = value),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '${filteredFriends.length} user(s)',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              if (filteredFriends.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 24),
+                  child: Center(child: Text('No users match your search.')),
+                )
+              else
+                ...filteredFriends.map(
+                  (friend) => Column(
+                    children: [
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 2),
+                        leading: CircleAvatar(
+                          backgroundImage: friend.avatarUrl != null
+                              ? NetworkImage(friend.avatarUrl!)
+                              : null,
+                          child: friend.avatarUrl == null
+                              ? Text(
+                                  friend.username.isNotEmpty
+                                      ? friend.username[0].toUpperCase()
+                                      : '?',
+                                )
+                              : null,
+                        ),
+                        title: Text(friend.username),
+                        subtitle: Text(
+                          widget.listType == FriendListType.followers
+                              ? 'Follower'
+                              : 'Following',
+                        ),
+                        onTap: () => context.push(
+                          '${Routes.profile}/${Uri.encodeComponent(friend.userId)}',
+                        ),
+                      ),
+                      const Divider(height: 1),
+                    ],
+                  ),
                 ),
-                onTap: () => context.push(
-                  '${Routes.profile}/${Uri.encodeComponent(friend.userId)}',
-                ),
-              );
-            },
+            ],
           ),
         );
     }

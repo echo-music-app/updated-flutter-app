@@ -34,15 +34,27 @@ class EmailDeliveryFailedError(Exception):
     pass
 
 
-class InvalidGoogleTokenError(Exception):
+class InvalidAppleTokenError(Exception):
     pass
 
 
-class GoogleAuthNotConfiguredError(Exception):
+class AppleAuthNotConfiguredError(Exception):
     pass
 
 
-class GoogleAccountConflictError(Exception):
+class AppleAccountConflictError(Exception):
+    pass
+
+
+class InvalidSoundCloudTokenError(Exception):
+    pass
+
+
+class SoundCloudAuthNotConfiguredError(Exception):
+    pass
+
+
+class SoundCloudAccountConflictError(Exception):
     pass
 
 

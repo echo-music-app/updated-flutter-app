@@ -92,6 +92,9 @@ class ProfileViewModel extends ChangeNotifier {
     Future<FollowRelationStatus> Function(String userId)? getFollowStatus,
     Future<void> Function(String userId)? sendFollowRequest,
     Future<void> Function(String userId)? acceptFollowRequest,
+    Future<List<ProfilePostComment>> Function(String postId)? listPostComments,
+    Future<ProfilePostComment> Function(String postId, String content)?
+    createPostComment,
   }) : _resolveTarget = resolveTarget,
        _loadHeader = loadHeader,
        _loadPostsPage = loadPostsPage,
@@ -100,7 +103,9 @@ class ProfileViewModel extends ChangeNotifier {
        _currentUserId = currentUserId,
        _getFollowStatus = getFollowStatus,
        _sendFollowRequest = sendFollowRequest,
-       _acceptFollowRequest = acceptFollowRequest;
+       _acceptFollowRequest = acceptFollowRequest,
+       _listPostComments = listPostComments,
+       _createPostComment = createPostComment;
 
   final ResolveProfileTargetUseCase _resolveTarget;
   final LoadProfileHeaderUseCase _loadHeader;
@@ -111,6 +116,10 @@ class ProfileViewModel extends ChangeNotifier {
   final Future<FollowRelationStatus> Function(String userId)? _getFollowStatus;
   final Future<void> Function(String userId)? _sendFollowRequest;
   final Future<void> Function(String userId)? _acceptFollowRequest;
+  final Future<List<ProfilePostComment>> Function(String postId)?
+  _listPostComments;
+  final Future<ProfilePostComment> Function(String postId, String content)?
+  _createPostComment;
 
   ProfileViewState _state = const ProfileViewState();
   ProfileViewState get state => _state;
@@ -393,6 +402,45 @@ class ProfileViewModel extends ChangeNotifier {
     } catch (_) {
       _emit(_state.copyWith(isFollowActionInProgress: false));
       rethrow;
+    }
+  }
+
+  Future<List<ProfilePostComment>> loadPostComments(String postId) async {
+    if (_listPostComments == null) return const [];
+    try {
+      return await _listPostComments(postId);
+    } on ProfileAuthException {
+      _emit(
+        _state.copyWith(
+          headerState: HeaderLoadState.authRequired,
+          postsState: PostsLoadState.authRequired,
+        ),
+      );
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<ProfilePostComment?> addPostComment(
+    String postId,
+    String content,
+  ) async {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return null;
+    if (_createPostComment == null) return null;
+    try {
+      return await _createPostComment(postId, trimmed);
+    } on ProfileAuthException {
+      _emit(
+        _state.copyWith(
+          headerState: HeaderLoadState.authRequired,
+          postsState: PostsLoadState.authRequired,
+        ),
+      );
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 

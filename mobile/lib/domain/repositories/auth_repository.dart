@@ -32,5 +32,7 @@ abstract class AuthRepository extends ChangeNotifier {
   );
   Future<void> verifyEmail(String email, String code);
   Future<PendingVerification> resendVerificationCode(String email);
-  Future<void> loginWithGoogle();
+  Future<void> loginWithSpotify();
+  Future<void> loginWithApple();
+  Future<void> loginWithSoundCloud();
 }

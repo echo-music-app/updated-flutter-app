@@ -23,8 +23,15 @@ class VerificationDispatch:
 
 
 @dataclass
-class GoogleIdentity:
+class AppleIdentity:
     subject: str
     email: str
     email_verified: bool
+    name: str | None = None
+
+
+@dataclass
+class SoundCloudIdentity:
+    subject: str
+    email: str
     name: str | None = None

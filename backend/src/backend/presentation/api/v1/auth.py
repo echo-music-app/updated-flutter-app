@@ -12,26 +12,30 @@ from backend.core.decorators import public_endpoint
 from backend.core.deps import get_current_user
 from backend.domain.auth.exceptions import (
     AccountDisabledError,
+    AppleAccountConflictError,
+    AppleAuthNotConfiguredError,
     EmailDeliveryFailedError,
     EmailDeliveryNotConfiguredError,
     EmailNotVerifiedError,
     EmailTakenError,
-    GoogleAccountConflictError,
-    GoogleAuthNotConfiguredError,
+    InvalidAppleTokenError,
     InvalidCredentialsError,
-    InvalidGoogleTokenError,
     InvalidMfaCodeError,
+    InvalidSoundCloudTokenError,
     InvalidTokenError,
     InvalidVerificationCodeError,
     MfaNotConfiguredError,
     MfaRequiredError,
+    SoundCloudAccountConflictError,
+    SoundCloudAuthNotConfiguredError,
     UsernameTakenError,
 )
+from backend.infrastructure.apple.token_verifier import verify_apple_id_token
 from backend.infrastructure.email.smtp_sender import send_verification_email
-from backend.infrastructure.google.token_verifier import verify_google_id_token
 from backend.infrastructure.persistence.models.user import User
 from backend.infrastructure.persistence.repositories.token_repository import SqlAlchemyTokenRepository
 from backend.infrastructure.persistence.repositories.user_repository import SqlAlchemyUserRepository
+from backend.infrastructure.soundcloud.token_exchange import exchange_soundcloud_code_for_identity
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 _PASSWORD_POLICY_ERROR = "Password must be 8-128 chars and include uppercase, lowercase, number, and special character"
@@ -151,7 +155,7 @@ class MfaCodeRequest(BaseModel):
         return code
 
 
-class GoogleLoginRequest(BaseModel):
+class AppleLoginRequest(BaseModel):
     id_token: str
 
     @field_validator("id_token")
@@ -159,8 +163,31 @@ class GoogleLoginRequest(BaseModel):
     def validate_id_token(cls, v: str) -> str:
         token = v.strip()
         if not token:
-            raise ValueError("Google ID token is required")
+            raise ValueError("Apple ID token is required")
         return token
+
+
+class SoundCloudTokenRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, v: str) -> str:
+        code = v.strip()
+        if not code:
+            raise ValueError("SoundCloud authorization code is required")
+        return code
+
+    @field_validator("redirect_uri")
+    @classmethod
+    def validate_redirect_uri(cls, v: str) -> str:
+        redirect_uri = v.strip()
+        if "://" not in redirect_uri:
+            raise ValueError("redirect_uri must be an absolute URI")
+        if redirect_uri.startswith("http://"):
+            raise ValueError("redirect_uri must not use insecure HTTP")
+        return redirect_uri
 
 
 def get_auth_use_cases(db: AsyncSession = Depends(get_db_session)) -> AuthUseCases:
@@ -310,24 +337,54 @@ async def resend_verification(
     )
 
 
-@router.post("/google", response_model=TokenResponse)
+@router.post("/apple", response_model=TokenResponse)
 @public_endpoint
-async def google_login(
-    body: GoogleLoginRequest,
+async def apple_login(
+    body: AppleLoginRequest,
     use_cases: AuthUseCases = Depends(get_auth_use_cases),
 ):
     settings = get_settings()
     try:
-        identity = await verify_google_id_token(settings, body.id_token)
-        token_pair = await use_cases.login_with_google(identity)
-    except GoogleAuthNotConfiguredError:
-        raise HTTPException(status_code=503, detail="Google authentication is not configured")
-    except InvalidGoogleTokenError:
-        raise HTTPException(status_code=401, detail="Invalid Google token")
+        identity = await verify_apple_id_token(settings, body.id_token)
+        token_pair = await use_cases.login_with_apple(identity)
+    except AppleAuthNotConfiguredError:
+        raise HTTPException(status_code=503, detail="Apple authentication is not configured")
+    except InvalidAppleTokenError:
+        raise HTTPException(status_code=401, detail="Invalid Apple token")
     except InvalidCredentialsError:
-        raise HTTPException(status_code=401, detail="Google account email is not verified")
-    except GoogleAccountConflictError:
-        raise HTTPException(status_code=409, detail="This email is already linked to a different Google account")
+        raise HTTPException(status_code=401, detail="Apple account email is not verified")
+    except AppleAccountConflictError:
+        raise HTTPException(status_code=409, detail="This email is already linked to a different Apple account")
+    except AccountDisabledError:
+        raise HTTPException(status_code=403, detail="Account is disabled")
+
+    return TokenResponse(
+        access_token=token_pair.access_token,
+        refresh_token=token_pair.refresh_token,
+        expires_in=token_pair.expires_in,
+    )
+
+
+@router.post("/soundcloud/token", response_model=TokenResponse)
+@public_endpoint
+async def soundcloud_token_login(
+    body: SoundCloudTokenRequest,
+    use_cases: AuthUseCases = Depends(get_auth_use_cases),
+):
+    settings = get_settings()
+    try:
+        identity = await exchange_soundcloud_code_for_identity(
+            settings,
+            code=body.code,
+            redirect_uri=body.redirect_uri,
+        )
+        token_pair = await use_cases.login_with_soundcloud(identity)
+    except SoundCloudAuthNotConfiguredError:
+        raise HTTPException(status_code=503, detail="SoundCloud authentication is not configured")
+    except InvalidSoundCloudTokenError:
+        raise HTTPException(status_code=401, detail="Invalid SoundCloud token")
+    except SoundCloudAccountConflictError:
+        raise HTTPException(status_code=409, detail="This email is already linked to a different SoundCloud account")
     except AccountDisabledError:
         raise HTTPException(status_code=403, detail="Account is disabled")
 

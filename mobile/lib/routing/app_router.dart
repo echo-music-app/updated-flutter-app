@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile/domain/repositories/spotify_auth_repository.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/domain/repositories/auth_repository.dart';
 import 'package:mobile/domain/repositories/queue_repository_interface.dart';
@@ -177,7 +176,6 @@ GoRouter appRouter(AuthRepository authRepository) => GoRouter(
 LoginViewModel _buildLoginViewModel(BuildContext ctx) {
   return LoginViewModel(
     authRepository: ctx.read<AuthRepository>(),
-    spotifyAuthRepository: ctx.read<SpotifyAuthRepositoryInterface>(),
   );
 }
 
@@ -263,5 +261,7 @@ ProfileViewModel _buildProfileViewModel(
     getFollowStatus: repo.getFollowStatus,
     sendFollowRequest: repo.sendFollowRequest,
     acceptFollowRequest: repo.acceptFollowRequest,
+    listPostComments: repo.listPostComments,
+    createPostComment: repo.createPostComment,
   );
 }

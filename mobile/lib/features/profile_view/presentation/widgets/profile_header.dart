@@ -37,15 +37,15 @@ class ProfileHeaderWidget extends StatelessWidget {
         : '?';
     final imageProvider = _profileImageProvider();
 
-    final gradientColors = isLight
-        ? const [Color(0xFFF9FBFF), Color(0xFFEFF4FF)]
-        : const [Color(0xFF1E232D), Color(0xFF161B23)];
-    final borderColor = isLight
-        ? const Color(0xFFD8E2F0)
-        : const Color(0xFF2D3442);
     final mutedTextColor = isLight
         ? const Color(0xFF5F6C80)
         : const Color(0xFFAAB3C4);
+    final surfaceColor = isLight
+        ? const Color(0xFFF7FAFC)
+        : const Color(0xFF161B23);
+    final borderColor = isLight
+        ? const Color(0xFFD8E2F0)
+        : const Color(0xFF2D3442);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,11 +53,7 @@ class ProfileHeaderWidget extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradientColors,
-            ),
+            color: surfaceColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: borderColor),
           ),
@@ -178,14 +174,6 @@ class ProfileHeaderWidget extends StatelessWidget {
                 ],
               ),
             ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'My Posts',
-          style: textTheme.titleMedium?.copyWith(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 16),

@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:app_links/app_links.dart';
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -5,28 +10,39 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/domain/models/auth_tokens.dart';
 import 'package:mobile/domain/models/spotify_session.dart';
 import 'package:mobile/domain/repositories/auth_repository.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
   EmailAuthRepository({
     required String echoBaseUrl,
-    String? googleClientId,
-    String? googleServerClientId,
+    String? spotifyClientId,
+    String? spotifyRedirectUri,
+    String? appleClientId,
+    String? appleRedirectUri,
+    String? soundCloudClientId,
+    String? soundCloudRedirectUri,
     FlutterSecureStorage? secureStorage,
     Dio? dio,
   }) : _echoBaseUrl = echoBaseUrl,
-       _googleSignIn = GoogleSignIn.instance,
-       _googleClientId = googleClientId ?? '',
-       _googleServerClientId = googleServerClientId ?? '',
+       _spotifyClientId = spotifyClientId ?? '',
+       _spotifyRedirectUri = spotifyRedirectUri ?? '',
+       _appleClientId = appleClientId ?? '',
+       _appleRedirectUri = appleRedirectUri ?? '',
+       _soundCloudClientId = soundCloudClientId ?? '',
+       _soundCloudRedirectUri = soundCloudRedirectUri ?? '',
        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _dio = dio ?? Dio() {
     _init();
   }
 
   final String _echoBaseUrl;
-  final GoogleSignIn _googleSignIn;
-  final String _googleClientId;
-  final String _googleServerClientId;
+  final String _spotifyClientId;
+  final String _spotifyRedirectUri;
+  final String _appleClientId;
+  final String _appleRedirectUri;
+  final String _soundCloudClientId;
+  final String _soundCloudRedirectUri;
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
 
@@ -205,49 +221,165 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
   }
 
   @override
-  Future<void> loginWithGoogle() async {
+  Future<void> loginWithSpotify() async {
     try {
-      final isAndroid =
-          !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-      if (isAndroid && _googleServerClientId.isEmpty) {
+      if (_spotifyClientId.isEmpty || _spotifyRedirectUri.isEmpty) {
         throw Exception(
-          'Google sign-in is not configured. Provide --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.',
+          'Spotify login is not configured. Provide SPOTIFY_CLIENT_ID and SPOTIFY_REDIRECT_URI.',
         );
       }
 
-      if (_googleClientId.isNotEmpty || _googleServerClientId.isNotEmpty) {
-        await _googleSignIn.initialize(
-          clientId: _googleClientId.isEmpty ? null : _googleClientId,
-          serverClientId: _googleServerClientId.isEmpty
-              ? null
-              : _googleServerClientId,
-        );
-      } else {
-        await _googleSignIn.initialize();
-      }
+      final codeVerifier = _generateCodeVerifier();
+      final codeChallenge = _generateCodeChallenge(codeVerifier);
 
-      final account = await _googleSignIn.authenticate();
-      final auth = account.authentication;
-      final idToken = auth.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        throw Exception('Google ID token is missing');
+      final authUri = Uri.https('accounts.spotify.com', '/authorize', {
+        'client_id': _spotifyClientId,
+        'response_type': 'code',
+        'redirect_uri': _spotifyRedirectUri,
+        'code_challenge_method': 'S256',
+        'code_challenge': codeChallenge,
+        'scope': 'user-read-private user-read-email streaming',
+      });
+
+      final redirectFuture = AppLinks().uriLinkStream
+          .firstWhere((uri) => uri.queryParameters['code'] != null)
+          .timeout(const Duration(minutes: 2));
+
+      await launchUrl(authUri, mode: LaunchMode.externalApplication);
+      final redirectUri = await redirectFuture;
+      final code = redirectUri.queryParameters['code'];
+      if (code == null || code.isEmpty) {
+        throw Exception('Spotify authorization code is missing');
       }
 
       final response = await _dio.post(
-        '$_echoBaseUrl/v1/auth/google',
-        data: {'id_token': idToken},
+        '$_echoBaseUrl/v1/auth/spotify/token',
+        data: {
+          'code': code,
+          'code_verifier': codeVerifier,
+          'redirect_uri': _spotifyRedirectUri,
+        },
       );
       if (response.statusCode != 200) {
-        throw Exception('Google login failed: ${response.statusCode}');
+        throw Exception('Spotify login failed: ${response.statusCode}');
       }
 
       final data = response.data as Map<String, dynamic>;
       await _parseAndStoreTokens(data);
     } on DioException catch (e) {
-      final errorMessage = e.response?.data?['detail'] ?? 'Google login failed';
+      final errorMessage =
+          e.response?.data?['detail'] ?? 'Spotify login failed';
       throw Exception(errorMessage);
     } catch (e) {
-      throw Exception('Google login failed: $e');
+      throw Exception('Spotify login failed: $e');
+    }
+  }
+
+  @override
+  Future<void> loginWithApple() async {
+    try {
+      final isApplePlatform =
+          !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.iOS ||
+              defaultTargetPlatform == TargetPlatform.macOS);
+
+      late final AuthorizationCredentialAppleID credential;
+      if (isApplePlatform) {
+        credential = await SignInWithApple.getAppleIDCredential(
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+        );
+      } else {
+        if (_appleClientId.isEmpty || _appleRedirectUri.isEmpty) {
+          throw Exception(
+            'Apple sign-in is not configured for this platform. Provide APPLE_CLIENT_ID and APPLE_REDIRECT_URI.',
+          );
+        }
+        credential = await SignInWithApple.getAppleIDCredential(
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+          webAuthenticationOptions: WebAuthenticationOptions(
+            clientId: _appleClientId,
+            redirectUri: Uri.parse(_appleRedirectUri),
+          ),
+        );
+      }
+
+      final idToken = credential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Apple ID token is missing');
+      }
+
+      final response = await _dio.post(
+        '$_echoBaseUrl/v1/auth/apple',
+        data: {'id_token': idToken},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Apple login failed: ${response.statusCode}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      await _parseAndStoreTokens(data);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw Exception('Apple sign-in was canceled');
+      }
+      throw Exception('Apple login failed: ${e.code.name}');
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['detail'] ?? 'Apple login failed';
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('Apple login failed: $e');
+    }
+  }
+
+  @override
+  Future<void> loginWithSoundCloud() async {
+    try {
+      if (_soundCloudClientId.isEmpty || _soundCloudRedirectUri.isEmpty) {
+        throw Exception(
+          'SoundCloud login is not configured. Provide SOUNDCLOUD_CLIENT_ID and SOUNDCLOUD_REDIRECT_URI.',
+        );
+      }
+
+      final authUri = Uri.https('secure.soundcloud.com', '/authorize', {
+        'client_id': _soundCloudClientId,
+        'redirect_uri': _soundCloudRedirectUri,
+        'response_type': 'code',
+        'scope': 'non-expiring',
+      });
+
+      final redirectFuture = AppLinks().uriLinkStream
+          .firstWhere((uri) => uri.queryParameters['code'] != null)
+          .timeout(const Duration(minutes: 2));
+
+      await launchUrl(authUri, mode: LaunchMode.externalApplication);
+      final redirectUri = await redirectFuture;
+      final code = redirectUri.queryParameters['code'];
+      if (code == null || code.isEmpty) {
+        throw Exception('SoundCloud authorization code is missing');
+      }
+
+      final response = await _dio.post(
+        '$_echoBaseUrl/v1/auth/soundcloud/token',
+        data: {'code': code, 'redirect_uri': _soundCloudRedirectUri},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('SoundCloud login failed: ${response.statusCode}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      await _parseAndStoreTokens(data);
+    } on DioException catch (e) {
+      final errorMessage =
+          e.response?.data?['detail'] ?? 'SoundCloud login failed';
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('SoundCloud login failed: $e');
     }
   }
 
@@ -322,5 +454,17 @@ class EmailAuthRepository extends ChangeNotifier implements AuthRepository {
     await _secureStorage.delete(key: AuthTokens.refreshTokenKey);
     _isAuthenticated = false;
     notifyListeners();
+  }
+
+  static String _generateCodeVerifier() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(64, (_) => random.nextInt(256));
+    return base64UrlEncode(bytes).replaceAll('=', '').substring(0, 128);
+  }
+
+  static String _generateCodeChallenge(String verifier) {
+    final bytes = utf8.encode(verifier);
+    final digest = sha256.convert(bytes);
+    return base64UrlEncode(digest.bytes).replaceAll('=', '');
   }
 }

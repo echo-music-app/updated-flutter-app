@@ -42,14 +42,23 @@ curl -X POST http://127.0.0.1:8001/v1/auth/resend-verification \
   -d "{\"email\":\"alice@example.com\"}"
 ```
 
-## Google Authentication
-1. Add your Google Web client ID to `backend/.env`:
-   - `GOOGLE_CLIENT_IDS=your-web-client-id.apps.googleusercontent.com`
-2. Mobile sends Google `id_token` to:
-   - `POST /v1/auth/google`
+## Spotify Authentication
+1. Add Spotify credentials to `backend/.env`:
+   - `SPOTIFY_CLIENT_ID=...`
+   - `SPOTIFY_CLIENT_SECRET=...`
+2. Mobile starts Spotify PKCE flow and exchanges the code at:
+   - `POST /v1/auth/spotify/token`
+3. Backend links or creates a user from Spotify profile and issues Echo tokens.
+
+## Apple Authentication
+1. Add your Apple client IDs (Service ID / Bundle ID audiences) to `backend/.env`:
+   - `APPLE_CLIENT_IDS=com.example.echo,com.example.echo.web`
+2. Mobile sends Apple `id_token` to:
+   - `POST /v1/auth/apple`
 3. Backend verifies:
-   - token signature/issuer
-   - audience against `GOOGLE_CLIENT_IDS`
+   - token signature against Apple JWKS
+   - issuer is `https://appleid.apple.com`
+   - audience against `APPLE_CLIENT_IDS`
 
 ## Two-Factor Authentication (TOTP)
 1. Run latest migration:

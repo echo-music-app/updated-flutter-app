@@ -42,6 +42,12 @@ abstract interface class ProfileRepository {
     String? cursor,
   });
 
+  /// Fetches comments for a specific post.
+  Future<List<ProfilePostComment>> listPostComments(String postId);
+
+  /// Creates a comment for a specific post.
+  Future<ProfilePostComment> createPostComment(String postId, String content);
+
   /// Updates the authenticated user's profile fields.
   ///
   /// Throws [ProfileAuthException] for 401.

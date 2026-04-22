@@ -9,6 +9,8 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.security import generate_token, hash_password, hash_token
+from backend.domain.auth.entities import AppleIdentity, SoundCloudIdentity
+from backend.domain.auth.exceptions import InvalidAppleTokenError, InvalidSoundCloudTokenError
 from backend.infrastructure.persistence.models.auth import AccessToken, RefreshToken
 from backend.infrastructure.persistence.models.user import User, UserStatus
 
@@ -362,4 +364,158 @@ async def test_auth_with_deleted_user(async_client: AsyncClient, db_session: Asy
 @pytest.mark.anyio
 async def test_refresh_token_not_found_returns_401(async_client: AsyncClient):
     response = await async_client.post("/v1/auth/refresh-token", json={"refresh_token": "completely_invalid_token_xyz"})
+    assert response.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_apple_login_success_creates_or_links_user(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def _fake_verify(_settings: object, _token: str) -> AppleIdentity:
+        return AppleIdentity(
+            subject="apple-sub-123",
+            email="appleuser@example.com",
+            email_verified=True,
+            name="Apple User",
+        )
+
+    monkeypatch.setattr("backend.presentation.api.v1.auth.verify_apple_id_token", _fake_verify)
+
+    response = await async_client.post("/v1/auth/apple", json={"id_token": "fake-apple-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert "access_token" in body
+    assert "refresh_token" in body
+
+    user = (await db_session.execute(select(User).where(User.email == "appleuser@example.com"))).scalar_one()
+    assert user.apple_subject == "apple-sub-123"
+
+
+@pytest.mark.anyio
+async def test_apple_login_conflict_returns_409(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    now = datetime.now(UTC)
+    user = User(
+        id=uuid6.uuid7(),
+        email="apple-conflict@example.com",
+        username="appleconflict",
+        password_hash=hash_password("S3cur3P@ss!"),
+        status=UserStatus.active,
+        email_verified_at=now,
+        apple_subject="existing-apple-subject",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    async def _fake_verify(_settings: object, _token: str) -> AppleIdentity:
+        return AppleIdentity(
+            subject="different-apple-subject",
+            email="apple-conflict@example.com",
+            email_verified=True,
+        )
+
+    monkeypatch.setattr("backend.presentation.api.v1.auth.verify_apple_id_token", _fake_verify)
+
+    response = await async_client.post("/v1/auth/apple", json={"id_token": "fake-apple-token"})
+    assert response.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_apple_login_invalid_token_returns_401(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def _fake_verify(_settings: object, _token: str) -> AppleIdentity:
+        raise InvalidAppleTokenError("bad token")
+
+    monkeypatch.setattr("backend.presentation.api.v1.auth.verify_apple_id_token", _fake_verify)
+
+    response = await async_client.post("/v1/auth/apple", json={"id_token": "bad-token"})
+    assert response.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_soundcloud_login_success_creates_or_links_user(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def _fake_exchange(_settings: object, *, code: str, redirect_uri: str) -> SoundCloudIdentity:
+        assert code == "sc-code"
+        assert redirect_uri == "echo-auth://callback"
+        return SoundCloudIdentity(
+            subject="soundcloud-sub-123",
+            email="soundcloud-user@example.com",
+            name="SC User",
+        )
+
+    monkeypatch.setattr("backend.presentation.api.v1.auth.exchange_soundcloud_code_for_identity", _fake_exchange)
+
+    response = await async_client.post(
+        "/v1/auth/soundcloud/token",
+        json={"code": "sc-code", "redirect_uri": "echo-auth://callback"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "access_token" in body
+    assert "refresh_token" in body
+
+    user = (await db_session.execute(select(User).where(User.email == "soundcloud-user@example.com"))).scalar_one()
+    assert user.soundcloud_subject == "soundcloud-sub-123"
+
+
+@pytest.mark.anyio
+async def test_soundcloud_login_conflict_returns_409(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    now = datetime.now(UTC)
+    user = User(
+        id=uuid6.uuid7(),
+        email="soundcloud-conflict@example.com",
+        username="soundcloudconflict",
+        password_hash=hash_password("S3cur3P@ss!"),
+        status=UserStatus.active,
+        email_verified_at=now,
+        soundcloud_subject="existing-soundcloud-subject",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    async def _fake_exchange(_settings: object, *, code: str, redirect_uri: str) -> SoundCloudIdentity:
+        return SoundCloudIdentity(
+            subject="different-soundcloud-subject",
+            email="soundcloud-conflict@example.com",
+            name="SC User",
+        )
+
+    monkeypatch.setattr("backend.presentation.api.v1.auth.exchange_soundcloud_code_for_identity", _fake_exchange)
+
+    response = await async_client.post(
+        "/v1/auth/soundcloud/token",
+        json={"code": "sc-code", "redirect_uri": "echo-auth://callback"},
+    )
+    assert response.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_soundcloud_login_invalid_token_returns_401(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def _fake_exchange(_settings: object, *, code: str, redirect_uri: str) -> SoundCloudIdentity:
+        raise InvalidSoundCloudTokenError("bad token")
+
+    monkeypatch.setattr("backend.presentation.api.v1.auth.exchange_soundcloud_code_for_identity", _fake_exchange)
+
+    response = await async_client.post(
+        "/v1/auth/soundcloud/token",
+        json={"code": "bad-code", "redirect_uri": "echo-auth://callback"},
+    )
     assert response.status_code == 401

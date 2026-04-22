@@ -21,6 +21,9 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   final TextEditingController _composerController = TextEditingController();
+  final TextEditingController _threadSearchController = TextEditingController();
+  final FocusNode _composerFocusNode = FocusNode();
+  String _threadQuery = '';
 
   bool get _isConversationMode =>
       widget.userId != null && widget.userId!.trim().isNotEmpty;
@@ -42,6 +45,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   void dispose() {
     _composerController.dispose();
+    _threadSearchController.dispose();
+    _composerFocusNode.dispose();
     super.dispose();
   }
 
@@ -116,32 +121,85 @@ class _MessagesScreenState extends State<MessagesScreen> {
         );
       case MessagesInboxState.data:
         final badge = context.watch<MessageBadgeController>();
-        return ListView.separated(
-          itemCount: widget.viewModel.threads.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final thread = widget.viewModel.threads[index];
-            final unread = badge.unreadForThread(thread.userId);
-            return ListTile(
-              leading: CircleAvatar(
-                child: Text(
-                  thread.username.isNotEmpty
-                      ? thread.username[0].toUpperCase()
-                      : '?',
+        final filteredThreads = widget.viewModel.threads.where((thread) {
+          final query = _threadQuery.trim().toLowerCase();
+          if (query.isEmpty) return true;
+          return thread.username.toLowerCase().contains(query) ||
+              thread.lastMessagePreview.toLowerCase().contains(query);
+        }).toList(growable: false);
+        return RefreshIndicator(
+          onRefresh: widget.viewModel.loadInbox,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            children: [
+              TextField(
+                controller: _threadSearchController,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Search messages',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _threadQuery.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          tooltip: 'Clear',
+                          onPressed: () {
+                            _threadSearchController.clear();
+                            setState(() => _threadQuery = '');
+                          },
+                        ),
                 ),
+                onChanged: (value) => setState(() => _threadQuery = value),
               ),
-              title: Text(thread.username),
-              subtitle: Text(
-                thread.lastMessagePreview,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 10),
+              Text(
+                '${filteredThreads.length} conversation(s)',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              trailing: unread > 0 ? _UnreadThreadBadge(count: unread) : null,
-              onTap: () => context.push(
-                '${Routes.messages}/${Uri.encodeComponent(thread.userId)}',
-              ),
-            );
-          },
+              const SizedBox(height: 8),
+              if (filteredThreads.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 32),
+                  child: Center(child: Text('No conversations match your search.')),
+                )
+              else
+                ...filteredThreads.map((thread) {
+                  final unread = badge.unreadForThread(thread.userId);
+                  return Column(
+                    children: [
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 2),
+                        leading: CircleAvatar(
+                          child: Text(
+                            thread.username.isNotEmpty
+                                ? thread.username[0].toUpperCase()
+                                : '?',
+                          ),
+                        ),
+                        title: Text(thread.username),
+                        subtitle: Text(
+                          thread.lastMessagePreview,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: unread > 0
+                            ? _UnreadThreadBadge(count: unread)
+                            : Text(
+                                _shortDate(thread.lastMessageAt),
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                        onTap: () => context.push(
+                          '${Routes.messages}/${Uri.encodeComponent(thread.userId)}',
+                        ),
+                      ),
+                      const Divider(height: 1),
+                    ],
+                  );
+                }),
+            ],
+          ),
         );
     }
   }
@@ -182,11 +240,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
         );
       case MessagesConversationState.empty:
       case MessagesConversationState.data:
-        return Column(
-          children: [
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Column(
+            children: [
             Expanded(
               child: ListView.builder(
                 reverse: false,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.all(12),
                 itemCount: widget.viewModel.messages.length,
                 itemBuilder: (context, index) {
@@ -195,11 +257,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     alignment: message.isMine
                         ? Alignment.centerRight
                         : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                       ),
                       constraints: const BoxConstraints(maxWidth: 280),
                       decoration: BoxDecoration(
@@ -210,7 +272,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(message.text),
+                      child: Column(
+                        crossAxisAlignment: message.isMine
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
+                        children: [
+                          Text(message.text),
+                          const SizedBox(height: 4),
+                          Text(
+                            _shortTime(message.createdAt),
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -226,41 +300,58 @@ class _MessagesScreenState extends State<MessagesScreen> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _composerController,
-                        maxLines: 4,
-                        minLines: 1,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _send(),
-                        decoration: const InputDecoration(
-                          hintText: 'Write a message...',
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            focusNode: _composerFocusNode,
+                            controller: _composerController,
+                            maxLines: 4,
+                            minLines: 1,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => _send(),
+                            decoration: const InputDecoration(
+                              hintText: 'Write a message...',
+                              border: InputBorder.none,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        FilledButton.tonalIcon(
+                          onPressed: widget.viewModel.isSending ? null : _send,
+                          icon: widget.viewModel.isSending
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.send_rounded),
+                          label: const Text('Send'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: widget.viewModel.isSending ? null : _send,
-                      icon: widget.viewModel.isSending
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.send_rounded),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ],
+          ),
         );
     }
   }
 
   Future<void> _send() async {
+    FocusScope.of(context).unfocus();
     final text = _composerController.text;
     if (text.trim().isEmpty) return;
 
@@ -275,6 +366,22 @@ class _MessagesScreenState extends State<MessagesScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Could not send message.')));
+  }
+
+  String _shortDate(DateTime value) {
+    final now = DateTime.now();
+    final isToday = now.year == value.year &&
+        now.month == value.month &&
+        now.day == value.day;
+    if (isToday) return _shortTime(value);
+    return '${value.month}/${value.day}';
+  }
+
+  String _shortTime(DateTime value) {
+    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    final minute = value.minute.toString().padLeft(2, '0');
+    final suffix = value.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $suffix';
   }
 }
 

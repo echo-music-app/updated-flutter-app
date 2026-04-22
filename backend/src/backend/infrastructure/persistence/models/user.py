@@ -20,7 +20,8 @@ class User(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    google_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    apple_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    soundcloud_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(nullable=True)
     email_verification_code_hash: Mapped[bytes | None] = mapped_column(LargeBinary(32), nullable=True)
     email_verification_expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
@@ -35,7 +36,8 @@ class User(TimestampMixin, Base):
 
     __table_args__ = (
         Index("ix_users_email", "email"),
-        Index("ix_users_google_subject", "google_subject"),
+        Index("ix_users_apple_subject", "apple_subject"),
+        Index("ix_users_soundcloud_subject", "soundcloud_subject"),
         Index("ix_users_username", "username"),
         Index("ix_users_status", "status"),
     )

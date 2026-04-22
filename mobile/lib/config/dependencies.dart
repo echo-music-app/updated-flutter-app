@@ -28,8 +28,13 @@ const _spotifyRedirectUri = String.fromEnvironment(
   'SPOTIFY_REDIRECT_URI',
   defaultValue: 'echo-auth://callback',
 );
-const _googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
-const _googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+const _appleClientId = String.fromEnvironment('APPLE_CLIENT_ID');
+const _appleRedirectUri = String.fromEnvironment('APPLE_REDIRECT_URI');
+const _soundCloudClientId = String.fromEnvironment('SOUNDCLOUD_CLIENT_ID');
+const _soundCloudRedirectUri = String.fromEnvironment(
+  'SOUNDCLOUD_REDIRECT_URI',
+  defaultValue: 'echo-auth://callback',
+);
 
 List<SingleChildWidget> get providersLocal => [
   ChangeNotifierProvider<ThemeModeController>(
@@ -38,10 +43,14 @@ List<SingleChildWidget> get providersLocal => [
   ChangeNotifierProvider<AuthRepository>(
     create: (_) => EmailAuthRepository(
       echoBaseUrl: _echoBaseUrl,
-      googleClientId: _googleClientId.isEmpty ? null : _googleClientId,
-      googleServerClientId: _googleServerClientId.isEmpty
-          ? (_googleClientId.isEmpty ? null : _googleClientId)
-          : _googleServerClientId,
+      spotifyClientId: _spotifyClientId,
+      spotifyRedirectUri: _spotifyRedirectUri,
+      appleClientId: _appleClientId.isEmpty ? null : _appleClientId,
+      appleRedirectUri: _appleRedirectUri.isEmpty ? null : _appleRedirectUri,
+      soundCloudClientId: _soundCloudClientId.isEmpty
+          ? null
+          : _soundCloudClientId,
+      soundCloudRedirectUri: _soundCloudRedirectUri,
     ),
   ),
   ChangeNotifierProvider<SpotifyAuthRepositoryInterface>(
