@@ -105,7 +105,6 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
     final post = _currentPost;
     final comments = _commentsByPostId[post.id] ?? const <ProfilePostComment>[];
     final loadingComments = _loadingComments.contains(post.id);
-    final likesCount = _estimatedLikesCount(post, comments.length);
     return Scaffold(
       appBar: AppBar(title: const Text('Post')),
       body: Container(
@@ -197,14 +196,16 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
                           Row(
                             children: [
                               IconButton(
-                                visualDensity: VisualDensity.compact,
-                                icon: const Icon(Icons.favorite_border_rounded),
                                 onPressed: () {},
+                                visualDensity: VisualDensity.compact,
+                                tooltip: 'Like',
+                                icon: const Icon(Icons.favorite_border_rounded),
                               ),
                               IconButton(
-                                visualDensity: VisualDensity.compact,
-                                icon: const Icon(Icons.mode_comment_outlined),
                                 onPressed: () {},
+                                visualDensity: VisualDensity.compact,
+                                tooltip: 'Comment',
+                                icon: const Icon(Icons.mode_comment_outlined),
                               ),
                               IconButton(
                                 visualDensity: VisualDensity.compact,
@@ -219,29 +220,7 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
                               ),
                             ],
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              '$likesCount likes',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
                           _buildCaption(context, post),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              'View all ${comments.length} comments',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -503,12 +482,6 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
           )
           .toList(),
     );
-  }
-
-  int _estimatedLikesCount(ProfilePostSummary post, int commentCount) {
-    final attachmentBoost = post.attachments.length * 7;
-    final commentBoost = commentCount * 3;
-    return 12 + attachmentBoost + commentBoost;
   }
 
   String _humanDate(DateTime value) {

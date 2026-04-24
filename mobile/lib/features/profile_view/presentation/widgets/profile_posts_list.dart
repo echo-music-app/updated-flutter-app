@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile/features/profile_view/domain/entities/profile_posts_page.dart';
 import 'package:mobile/features/profile_view/presentation/profile_post_detail_screen.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
+import 'package:mobile/ui/core/themes/login_style_controller.dart';
+import 'package:provider/provider.dart';
 
 class ProfilePostsList extends StatelessWidget {
   const ProfilePostsList({
@@ -29,13 +31,9 @@ class ProfilePostsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
+    final style = context.watch<LoginStyleController>().style;
+    final palette = _ProfilePostsPalette.forStyle(style);
     final textTheme = Theme.of(context).textTheme;
-    final cardColor = colorScheme.surfaceContainerLowest;
-    final borderColor = colorScheme.outlineVariant;
-    final mutedTextColor = colorScheme.onSurfaceVariant;
-    final bodyTextColor = colorScheme.onSurface;
-    final titleTextColor = colorScheme.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,195 +42,126 @@ class ProfilePostsList extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _DemoSongPostCard(),
+              _DemoSongPostCard(palette: palette),
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Text(
                   l10n.profileEmptyPostsMessage,
                   style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
             ],
           )
         else
-          ListView.builder(
+          GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: posts.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.78,
+            ),
             itemBuilder: (context, index) {
               final post = posts[index];
               final textAttachment = _firstTextAttachment(post.attachments);
               final spotifyAttachment = _firstSpotifyAttachment(
                 post.attachments,
               );
+              final tileTone = _storyTone(index);
+
               return InkWell(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(18),
                 onTap: () => _openPostDetail(context, post, posts, index),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.all(14),
+                child: Ink(
                   decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: borderColor),
+                    color: Colors.white.withValues(alpha: 0.96),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xFF1E1E1E).withValues(alpha: 0.16),
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withValues(alpha: 0.10),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor:
-                                colorScheme.surfaceContainerHighest,
-                            child: Text(
-                              post.userId.isNotEmpty
-                                  ? post.userId[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.w700,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.flash_on_rounded,
+                              size: 16,
+                              color: Color(0xFF1A1A1A),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: tileTone.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF1A1A1A,
+                                ).withValues(alpha: 0.10),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'User ${_safeShortId(post.userId)}',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: titleTextColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  _humanDate(post.createdAt),
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: mutedTextColor,
-                                  ),
-                                ),
-                              ],
+                            padding: const EdgeInsets.all(10),
+                            child: Builder(
+                              builder: (context) {
+                                if (spotifyAttachment != null) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.music_note_rounded,
+                                      color: Color(0xFF1DB954),
+                                      size: 34,
+                                    ),
+                                  );
+                                }
+                                if (textAttachment != null) {
+                                  return Text(
+                                    textAttachment.content!,
+                                    maxLines: 7,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: const Color(0xFF1A1A1A),
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.2,
+                                    ),
+                                  );
+                                }
+                                return Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: const Color(0xFF4A4A4A),
+                                  size: 30,
+                                );
+                              },
                             ),
                           ),
-                          _privacyPill(
-                            context: context,
-                            label: _privacyCaption(post.privacy),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      if (textAttachment != null)
+                        ),
+                        const SizedBox(height: 8),
                         Text(
-                          textAttachment.content!,
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: bodyTextColor,
+                          _shortDate(post.createdAt),
+                          style: textTheme.labelMedium?.copyWith(
+                            color: const Color(0xFF5B5B5B),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                      if (spotifyAttachment != null) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer.withValues(
-                              alpha: 0.58,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.music_note_rounded,
-                                size: 18,
-                                color: colorScheme.onPrimaryContainer,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  spotifyAttachment.url!,
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
-                      if (textAttachment == null && spotifyAttachment == null)
-                        Container(
-                          height: 96,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                colorScheme.primary.withValues(alpha: 0.22),
-                                colorScheme.tertiary.withValues(alpha: 0.14),
-                              ],
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Campus story update',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              '${post.attachments.length} attachment(s)',
-                              style: textTheme.labelMedium?.copyWith(
-                                color: mutedTextColor,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          TextButton.icon(
-                            onPressed: () => _openCommentsSheet(context, post),
-                            icon: const Icon(
-                              Icons.mode_comment_outlined,
-                              size: 18,
-                            ),
-                            label: const Text('Comments'),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -264,25 +193,6 @@ class ProfilePostsList extends StatelessWidget {
     );
   }
 
-  Widget _privacyPill({required BuildContext context, required String label}) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: scheme.primary,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.15,
-        ),
-      ),
-    );
-  }
-
   Future<void> _openPostDetail(
     BuildContext context,
     ProfilePostSummary post,
@@ -299,19 +209,6 @@ class ProfilePostsList extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _humanDate(DateTime value) {
-    return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
-  }
-
-  String _privacyCaption(String privacy) {
-    return privacy.toUpperCase();
-  }
-
-  String _safeShortId(String id) {
-    if (id.length <= 6) return id;
-    return id.substring(0, 6);
   }
 
   PostAttachmentSummary? _firstTextAttachment(
@@ -340,84 +237,35 @@ class ProfilePostsList extends StatelessWidget {
     return null;
   }
 
-  Future<void> _openCommentsSheet(
-    BuildContext context,
-    ProfilePostSummary post,
-  ) async {
-    final comments = await onViewComments(post.id);
-    if (!context.mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Comments',
-                style: Theme.of(
-                  sheetContext,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              if (comments.isEmpty)
-                Text(
-                  'No comments yet.',
-                  style: Theme.of(sheetContext).textTheme.bodyMedium,
-                )
-              else
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 320),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: comments.length,
-                    separatorBuilder: (_, index) => const Divider(height: 16),
-                    itemBuilder: (context, index) {
-                      final comment = comments[index];
-                      return Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '${comment.username}: ',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            TextSpan(text: comment.content),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
+  Color _storyTone(int index) {
+    const tones = [
+      Color(0xFF2B2D42),
+      Color(0xFF273469),
+      Color(0xFF2A2A72),
+      Color(0xFF3A3A3A),
+    ];
+    return tones[index % tones.length];
+  }
+
+  String _shortDate(DateTime value) {
+    return '${value.month}/${value.day}/${value.year}';
   }
 }
 
 class _DemoSongPostCard extends StatelessWidget {
-  const _DemoSongPostCard();
+  const _DemoSongPostCard({required this.palette});
+
+  final _ProfilePostsPalette palette;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    final cardColor = colorScheme.surface;
-    final borderColor = colorScheme.outlineVariant;
-    final titleTextColor = colorScheme.onSurface;
-    final mutedTextColor = colorScheme.onSurfaceVariant;
-    final bodyTextColor = colorScheme.onSurface;
+    final cardColor = palette.cardColor;
+    final borderColor = palette.cardBorderColor;
+    final titleTextColor = palette.titleTextColor;
+    final mutedTextColor = palette.mutedTextColor;
+    final bodyTextColor = palette.bodyTextColor;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(12),
@@ -471,13 +319,13 @@ class _DemoSongPostCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
+                  color: palette.demoBadgeColor,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   'DEMO',
                   style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onPrimaryContainer,
+                    color: palette.demoBadgeTextColor,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -511,5 +359,87 @@ class _DemoSongPostCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _ProfilePostsPalette {
+  const _ProfilePostsPalette({
+    required this.cardColor,
+    required this.cardBorderColor,
+    required this.titleTextColor,
+    required this.mutedTextColor,
+    required this.bodyTextColor,
+    required this.attachmentChipColor,
+    required this.demoBadgeColor,
+    required this.demoBadgeTextColor,
+  });
+
+  final Color cardColor;
+  final Color cardBorderColor;
+  final Color titleTextColor;
+  final Color mutedTextColor;
+  final Color bodyTextColor;
+  final Color attachmentChipColor;
+  final Color demoBadgeColor;
+  final Color demoBadgeTextColor;
+
+  static _ProfilePostsPalette forStyle(LoginStyleVariant style) {
+    switch (style) {
+      case LoginStyleVariant.modernLight:
+        return const _ProfilePostsPalette(
+          cardColor: Colors.white,
+          cardBorderColor: Color(0xFFDDE4F5),
+          titleTextColor: Color(0xFF111827),
+          mutedTextColor: Color(0xFF667085),
+          bodyTextColor: Color(0xFF111827),
+          attachmentChipColor: Color(0xFFF0F3FA),
+          demoBadgeColor: Color(0xFFE9EDFF),
+          demoBadgeTextColor: Color(0xFF3E4CB3),
+        );
+      case LoginStyleVariant.darkMode:
+        return const _ProfilePostsPalette(
+          cardColor: Color(0xFF171D29),
+          cardBorderColor: Color(0xFF2E3647),
+          titleTextColor: Color(0xFFEAF0FF),
+          mutedTextColor: Color(0xFFAEB9CC),
+          bodyTextColor: Color(0xFFEAF0FF),
+          attachmentChipColor: Color(0xFF222B3B),
+          demoBadgeColor: Color(0xFF2A3550),
+          demoBadgeTextColor: Color(0xFFD7E2FF),
+        );
+      case LoginStyleVariant.gradientVibe:
+        return _ProfilePostsPalette(
+          cardColor: Colors.white.withValues(alpha: 0.16),
+          cardBorderColor: Colors.white.withValues(alpha: 0.30),
+          titleTextColor: Colors.white,
+          mutedTextColor: Colors.white70,
+          bodyTextColor: Colors.white,
+          attachmentChipColor: Colors.white.withValues(alpha: 0.20),
+          demoBadgeColor: Colors.white.withValues(alpha: 0.22),
+          demoBadgeTextColor: Colors.white,
+        );
+      case LoginStyleVariant.glassmorphism:
+        return _ProfilePostsPalette(
+          cardColor: Colors.white.withValues(alpha: 0.30),
+          cardBorderColor: Colors.white.withValues(alpha: 0.48),
+          titleTextColor: Colors.white,
+          mutedTextColor: Colors.white70,
+          bodyTextColor: Colors.white,
+          attachmentChipColor: Colors.white.withValues(alpha: 0.34),
+          demoBadgeColor: const Color(0xFF7A62FF),
+          demoBadgeTextColor: Colors.white,
+        );
+      case LoginStyleVariant.minimalClean:
+        return const _ProfilePostsPalette(
+          cardColor: Colors.white,
+          cardBorderColor: Color(0xFFD5D9E2),
+          titleTextColor: Color(0xFF111827),
+          mutedTextColor: Color(0xFF6B7280),
+          bodyTextColor: Color(0xFF111827),
+          attachmentChipColor: Color(0xFFF3F4F7),
+          demoBadgeColor: Color(0xFF111111),
+          demoBadgeTextColor: Colors.white,
+        );
+    }
   }
 }

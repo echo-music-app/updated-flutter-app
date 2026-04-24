@@ -103,29 +103,55 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
         queryParams['cursor'] = cursor;
       }
 
-      final response = await _getWithAuthRetry(
+      final followingResponse = await _getWithAuthRetry(
         '$_echoBaseUrl/v1/posts',
         queryParameters: queryParams,
       );
+      Map<String, dynamic>? myPostsData;
+      try {
+        final response = await _getWithAuthRetry(
+          '$_echoBaseUrl/v1/me/posts',
+          queryParameters: queryParams,
+        );
+        myPostsData = response.data as Map<String, dynamic>;
+      } catch (_) {
+        // Keep home feed resilient even if "my posts" endpoint is unavailable.
+      }
 
-      final data = response.data as Map<String, dynamic>;
-      final rawItems = (data['items'] as List<dynamic>? ?? const []);
+      final data = followingResponse.data as Map<String, dynamic>;
+      final rawFollowingItems = (data['items'] as List<dynamic>? ?? const []);
+      final rawMyItems = (myPostsData?['items'] as List<dynamic>? ?? const []);
+      final mergedById = <String, Map<String, dynamic>>{};
+      for (final item in rawFollowingItems) {
+        final map = item as Map<String, dynamic>;
+        final id = map['id'] as String?;
+        if (id == null) continue;
+        mergedById[id] = map;
+      }
+      for (final item in rawMyItems) {
+        final map = item as Map<String, dynamic>;
+        final id = map['id'] as String?;
+        if (id == null) continue;
+        mergedById[id] = map;
+      }
+      final rawItems = mergedById.values.toList(growable: false);
       final profileMap = await _loadUserProfiles(rawItems);
       final items = rawItems
           .map(
             (item) => _mapPost(
-              item as Map<String, dynamic>,
+              item,
               profileMap,
               includeFriendsCategory: true,
             ),
           )
           .whereType<HomeFeedPost>()
           .toList();
+      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       return HomeFeedPage(
         items: items,
         pageSize: (data['page_size'] as num?)?.toInt() ?? pageSize,
-        count: (data['count'] as num?)?.toInt() ?? items.length,
+        count: items.length,
         nextCursor: data['next_cursor'] as String?,
       );
     } on DioException catch (e) {

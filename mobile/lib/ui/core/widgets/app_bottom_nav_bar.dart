@@ -46,104 +46,76 @@ class AppBottomNavBar extends StatelessWidget {
       unreadCount = 0;
     }
     final colorScheme = Theme.of(context).colorScheme;
-    final unselectedColor = colorScheme.onSurfaceVariant;
-
-    Color iconColor(AppBottomNavTab tab) =>
-        currentTab == tab ? Colors.white : unselectedColor;
+    final unselectedColor = colorScheme.onSurfaceVariant.withValues(
+      alpha: 0.95,
+    );
 
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        child: Container(
-          height: 70,
-          decoration: BoxDecoration(
-            color: colorScheme.surface.withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withValues(alpha: 0.10),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+        child: SizedBox(
+          height: 64,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              _NavIconButton(
-                tooltip: 'Home',
-                isSelected: currentTab == AppBottomNavTab.home,
-                bubbleColor: _tabBubbleColor(AppBottomNavTab.home),
-                onPressed: () => _navigateTo(context, AppBottomNavTab.home),
-                child: Icon(
-                  Icons.home_rounded,
-                  color: iconColor(AppBottomNavTab.home),
-                ),
-              ),
-              _NavIconButton(
-                tooltip: 'Search',
-                isSelected: currentTab == AppBottomNavTab.search,
-                bubbleColor: _tabBubbleColor(AppBottomNavTab.search),
-                onPressed: () => _navigateTo(context, AppBottomNavTab.search),
-                child: Icon(
-                  Icons.search_rounded,
-                  color: iconColor(AppBottomNavTab.search),
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF7B5BFF), Color(0xFF5A3FFF)],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _NavIconButton(
+                    tooltip: 'Home',
+                    isSelected: currentTab == AppBottomNavTab.home,
+                    accentColor: _tabBubbleColor(AppBottomNavTab.home),
+                    unselectedColor: unselectedColor,
+                    onPressed: () => _navigateTo(context, AppBottomNavTab.home),
+                    child: const Icon(Icons.home_rounded),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF5A3FFF).withValues(alpha: 0.35),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                  _NavIconButton(
+                    tooltip: 'Search',
+                    isSelected: currentTab == AppBottomNavTab.search,
+                    accentColor: _tabBubbleColor(AppBottomNavTab.search),
+                    unselectedColor: unselectedColor,
+                    onPressed: () =>
+                        _navigateTo(context, AppBottomNavTab.search),
+                    child: const Icon(Icons.search_rounded),
+                  ),
+                  const SizedBox(width: 56),
+                  _NavIconButton(
+                    tooltip: 'Messages',
+                    isSelected: currentTab == AppBottomNavTab.messages,
+                    accentColor: _tabBubbleColor(AppBottomNavTab.messages),
+                    unselectedColor: unselectedColor,
+                    onPressed: () =>
+                        _navigateTo(context, AppBottomNavTab.messages),
+                    child: _MessageBubbleIcon(
+                      bubbleColor: currentTab == AppBottomNavTab.messages
+                          ? _tabBubbleColor(AppBottomNavTab.messages)
+                          : unselectedColor,
+                      dotColor: currentTab == AppBottomNavTab.messages
+                          ? colorScheme.surface
+                          : colorScheme.surfaceContainerHighest,
+                      unreadCount: unreadCount,
                     ),
                   ),
-                  onPressed: () => context.go(Routes.createPost),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create'),
-                ),
+                  _NavIconButton(
+                    tooltip: 'Profile',
+                    isSelected: currentTab == AppBottomNavTab.profile,
+                    accentColor: _tabBubbleColor(AppBottomNavTab.profile),
+                    unselectedColor: unselectedColor,
+                    onPressed: () =>
+                        _navigateTo(context, AppBottomNavTab.profile),
+                    child: const Icon(Icons.person_rounded),
+                  ),
+                ],
               ),
-              _NavIconButton(
-                tooltip: 'Messages',
-                isSelected: currentTab == AppBottomNavTab.messages,
-                bubbleColor: _tabBubbleColor(AppBottomNavTab.messages),
-                onPressed: () => _navigateTo(context, AppBottomNavTab.messages),
-                child: _MessageBubbleIcon(
-                  bubbleColor: iconColor(AppBottomNavTab.messages),
-                  dotColor: currentTab == AppBottomNavTab.messages
-                      ? _tabBubbleColor(AppBottomNavTab.messages)
-                      : colorScheme.surface,
-                  unreadCount: unreadCount,
-                ),
-              ),
-              _NavIconButton(
-                tooltip: 'Profile',
-                isSelected: currentTab == AppBottomNavTab.profile,
-                bubbleColor: _tabBubbleColor(AppBottomNavTab.profile),
-                onPressed: () => _navigateTo(context, AppBottomNavTab.profile),
-                child: Icon(
-                  Icons.person_rounded,
-                  color: iconColor(AppBottomNavTab.profile),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: -6,
+                child: Center(
+                  child: _CreateOrbButton(
+                    onPressed: () => context.go(Routes.createPost),
+                  ),
                 ),
               ),
             ],
@@ -158,51 +130,93 @@ class _NavIconButton extends StatelessWidget {
   const _NavIconButton({
     required this.tooltip,
     required this.isSelected,
-    required this.bubbleColor,
+    required this.accentColor,
+    required this.unselectedColor,
     required this.onPressed,
     required this.child,
   });
 
   final String tooltip;
   final bool isSelected;
-  final Color bubbleColor;
+  final Color accentColor;
+  final Color unselectedColor;
   final VoidCallback onPressed;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSlide(
-      duration: const Duration(milliseconds: 220),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
-      offset: isSelected ? const Offset(0, -0.09) : Offset.zero,
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutBack,
-        scale: isSelected ? 1.06 : 1,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isSelected ? bubbleColor : Colors.transparent,
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: bubbleColor.withValues(alpha: 0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : const [],
-          ),
-          child: IconButton(
-            tooltip: tooltip,
-            onPressed: onPressed,
-            icon: child,
-          ),
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isSelected
+            ? accentColor.withValues(alpha: 0.16)
+            : Colors.white.withValues(alpha: 0.20),
+        border: Border.all(
+          color: isSelected
+              ? accentColor.withValues(alpha: 0.34)
+              : Colors.black.withValues(alpha: 0.10),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isSelected ? 0.15 : 0.08),
+            blurRadius: isSelected ? 10 : 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: IconTheme(
+          data: IconThemeData(
+            color: isSelected ? accentColor : unselectedColor,
+            size: 22,
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateOrbButton extends StatelessWidget {
+  const _CreateOrbButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF35C8FF), Color(0xFFFF6B4A)],
+        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF6B4A).withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: IconButton(
+        tooltip: 'Create Post',
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          fixedSize: const Size(50, 50),
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.transparent,
+          shape: const CircleBorder(),
+        ),
+        icon: const Icon(Icons.add_rounded, size: 25),
       ),
     );
   }
@@ -306,7 +320,7 @@ Color _tabBubbleColor(AppBottomNavTab tab) {
     case AppBottomNavTab.search:
       return const Color(0xFF00A991);
     case AppBottomNavTab.messages:
-      return const Color(0xFF8C5BFF);
+      return const Color(0xFF35C8FF);
     case AppBottomNavTab.profile:
       return const Color(0xFFFF6B4A);
   }

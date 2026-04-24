@@ -7,13 +7,15 @@ import 'package:mobile/features/profile_view/presentation/profile_view_model.dar
 import 'package:mobile/features/profile_view/presentation/widgets/profile_posts_list.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/routing/routes.dart';
+import 'package:mobile/ui/core/themes/login_style_controller.dart';
 import 'package:mobile/ui/core/widgets/app_avatar.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
 import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
 import 'package:mobile/ui/core/widgets/tab_accent_strip.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
-enum _TopFiveCategory { tracks, albums, artists }
+const _kProfileTrendAccent = Color(0xFFFF6B4A);
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.viewModel, this.userId});
@@ -27,7 +29,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _picker = ImagePicker();
-  _TopFiveCategory _topFiveCategory = _TopFiveCategory.tracks;
   bool _spotifyConnected = true;
   String? _syncedProfileId;
 
@@ -59,18 +60,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context, _) {
         final state = widget.viewModel.state;
         final title = _resolveTitle(l10n, state);
-        final scheme = Theme.of(context).colorScheme;
+        final activeStyle = context.watch<LoginStyleController>().style;
+        final palette = _ProfilePalette.forStyle(activeStyle);
 
         return Scaffold(
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: Colors.transparent,
-            foregroundColor: scheme.onSurface,
+            backgroundColor: palette.appBarColor,
+            foregroundColor: palette.primaryText,
             surfaceTintColor: Colors.transparent,
             leading: const AppTopNavLeading(),
             title: Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: palette.primaryText,
+              ),
             ),
             centerTitle: true,
           ),
@@ -79,11 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  scheme.surface,
-                  scheme.surfaceContainerHighest.withValues(alpha: 0.85),
-                  scheme.primary.withValues(alpha: 0.10),
-                ],
+                colors: palette.backgroundGradient,
               ),
             ),
             child: RefreshIndicator(
@@ -135,56 +136,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ) {
     switch (state.headerState) {
       case HeaderLoadState.loading:
-        return const _ProfilePanel(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 28),
+          child: Center(child: CircularProgressIndicator()),
         );
       case HeaderLoadState.data:
-        return _ProfilePanel(
-          child: _buildProfileOverview(context, state.header!, state),
-        );
+        return _buildProfileOverview(context, state.header!, state);
       case HeaderLoadState.empty:
-        return _ProfilePanel(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(l10n.profileEmptyBioMessage),
-          ),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Text(l10n.profileEmptyBioMessage),
         );
       case HeaderLoadState.error:
-        return _ProfilePanel(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.profileLoadErrorMessage),
-                const SizedBox(height: 8),
-                Semantics(
-                  label: l10n.retryButton,
-                  child: ElevatedButton(
-                    onPressed: widget.viewModel.retryHeader,
-                    child: Text(l10n.retryButton),
-                  ),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.profileLoadErrorMessage),
+              const SizedBox(height: 8),
+              Semantics(
+                label: l10n.retryButton,
+                child: ElevatedButton(
+                  onPressed: widget.viewModel.retryHeader,
+                  child: Text(l10n.retryButton),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       case HeaderLoadState.notFound:
-        return _ProfilePanel(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(l10n.profileNotFoundMessage),
-          ),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Text(l10n.profileNotFoundMessage),
         );
       case HeaderLoadState.authRequired:
-        return _ProfilePanel(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(l10n.profileLoadErrorMessage),
-          ),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Text(l10n.profileLoadErrorMessage),
         );
     }
   }
@@ -194,49 +183,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     AppLocalizations l10n,
     ProfileViewState state,
   ) {
-    return _ProfilePanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: _kProfileTrendAccent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.18)),
+          ),
+          child: Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.grid_view_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 19,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
+              const Icon(Icons.auto_awesome_rounded, color: Colors.black),
+              const SizedBox(width: 8),
+              const Expanded(
                 child: Text(
-                  l10n.profilePostsSectionTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  'My Posts',
+                  style: TextStyle(
+                    color: Colors.black,
                     fontWeight: FontWeight.w800,
+                    fontSize: 16,
                   ),
                 ),
               ),
               Text(
-                '${state.totalPostsCount} posts',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                '${state.totalPostsCount}',
+                style: const TextStyle(
+                  color: Colors.black87,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          _buildPostsContent(l10n, state),
-        ],
-      ),
+        ),
+        const SizedBox(height: 10),
+        _buildPostsContent(l10n, state),
+      ],
     );
   }
 
@@ -246,10 +230,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ProfileViewState state,
   ) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
-    final primaryText = theme.colorScheme.onSurface;
-    final secondaryText = theme.colorScheme.onSurfaceVariant;
-
     final editable = _parseEditableProfileData(
       header,
       fallbackSpotifyConnected: _spotifyConnected,
@@ -259,522 +239,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _spotifyConnected = editable.spotifyConnected;
     }
 
-    final topFiveItems = _topItems(header, state, _topFiveCategory);
-    final universityName = editable.universityName;
-    final classYear = editable.graduationYear;
-    final studyYear = editable.studyYear?.label;
-    final friendCount = header.followersCount;
     final postsCount = state.totalPostsCount;
+    final followersCount = header.followersCount;
+    final followingCount = header.followingCount;
     final avatarProvider = _profileImageProvider(
       header: header,
       localAvatarPath: state.localAvatarPath,
     );
-    final heroGradient = isLight
-        ? const [Color(0xFF3058FF), Color(0xFF7A42FF)]
-        : const [Color(0xFF21336E), Color(0xFF462966)];
-    final relationSummary = [
-      if (editable.gender != _GenderOption.preferNotToSay)
-        editable.gender.label,
-      if (editable.age != null) '${editable.age} yrs',
-    ].join(' | ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: heroGradient,
-            ),
+            color: _kProfileTrendAccent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.18)),
             boxShadow: [
               BoxShadow(
-                color: heroGradient.first.withValues(alpha: 0.45),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Text(
-                      'Music Identity',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
+              AppAvatar(
+                radius: 48,
+                imageProvider: avatarProvider,
+                backgroundColor: Colors.black.withValues(alpha: 0.10),
+                fallbackText: header.username.isNotEmpty
+                    ? header.username[0].toUpperCase()
+                    : '?',
+                fallbackTextStyle: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 30,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                editable.fullName,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '@${editable.username}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 10),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  AppAvatar(
-                    radius: 35,
-                    backgroundColor: Colors.white.withValues(alpha: 0.26),
-                    imageProvider: avatarProvider,
-                    fallbackText: header.username.isNotEmpty
-                        ? header.username[0].toUpperCase()
-                        : '?',
-                    fallbackTextStyle: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          editable.fullName,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '@${editable.username}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.86),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                editable.bio.trim().isEmpty
-                    ? 'Music lover and student in Budapest.'
-                    : editable.bio,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.90),
-                  height: 1.35,
-                ),
-              ),
-              if (relationSummary.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    relationSummary,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.82),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _ProfileStatChip(
-                    label: 'Friends',
-                    value: friendCount,
-                    icon: Icons.group_rounded,
-                  ),
-                  _ProfileStatChip(
-                    label: 'Posts',
-                    value: postsCount,
-                    icon: Icons.auto_stories_rounded,
-                  ),
-                  _ProfileStatChip(
-                    label: 'Following',
-                    value: header.followingCount,
-                    icon: Icons.person_add_rounded,
-                  ),
-                  _ProfileStatChip(
-                    label: 'Genres',
-                    value: header.preferredGenres.length,
-                    icon: Icons.graphic_eq_rounded,
-                  ),
+                  _InstagramStat(value: postsCount, label: 'Posts'),
+                  _InstagramStat(value: followersCount, label: 'Friends'),
+                  _InstagramStat(value: followingCount, label: 'Following'),
                 ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        if (editable.bio.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            editable.bio.trim(),
+            style: theme.textTheme.bodyMedium?.copyWith(height: 1.3),
+          ),
+        ],
+        const SizedBox(height: 10),
         Row(
           children: [
-            if (widget.userId == null)
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => _showEditProfileSheet(state),
-                  icon: const Icon(Icons.edit_rounded),
-                  label: const Text('Edit profile'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              )
-            else
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: _canRunFollowAction(state) ? _followUser : null,
-                  icon: state.isFollowActionInProgress
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(_followActionIcon(state)),
-                  label: Text(_followActionLabel(state)),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(width: 10),
             Expanded(
-              child: OutlinedButton.icon(
+              child: FilledButton(
+                onPressed: widget.userId == null
+                    ? () => _showEditProfileSheet(state)
+                    : (_canRunFollowAction(state) ? _followUser : null),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(38),
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: state.isFollowActionInProgress
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        widget.userId == null
+                            ? 'Edit profile'
+                            : _followActionLabel(state),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
                 onPressed: widget.userId == null
                     ? _pickProfilePhoto
                     : () => context.push(
                         '${Routes.messages}/${Uri.encodeComponent(widget.userId!)}',
                       ),
-                icon: Icon(
-                  widget.userId == null
-                      ? Icons.photo_camera_outlined
-                      : Icons.person_add_alt_1_rounded,
-                ),
-                label: Text(
-                  widget.userId == null ? 'Change photo' : 'Add friend',
-                ),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
+                  minimumSize: const Size.fromHeight(38),
+                  foregroundColor: Colors.black,
+                  side: BorderSide(color: Colors.black.withValues(alpha: 0.35)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                ),
+                child: Text(
+                  widget.userId == null ? 'Share profile' : 'Message',
                 ),
               ),
             ),
           ],
         ),
         if (header.preferredGenres.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Favorite genres',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: primaryText,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: header.preferredGenres
-                      .take(8)
-                      .map((genre) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.12,
-                            ),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            genre,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
-              ],
-            ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: header.preferredGenres
+                .take(6)
+                .map((genre) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '#$genre',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                })
+                .toList(growable: false),
           ),
         ],
-        const SizedBox(height: 16),
-        _SectionCard(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2A3FFF), Color(0xFF7C4DFF)],
-                    ),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: const Icon(
-                    Icons.school_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        universityName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: primaryText,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        studyYear == null
-                            ? 'Class of $classYear'
-                            : '$studyYear • Class of $classYear',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: secondaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (widget.userId == null)
-                  TextButton.icon(
-                    onPressed: () => _editUniversityYear(state, classYear),
-                    icon: const Icon(Icons.edit_calendar_rounded, size: 15),
-                    label: const Text('Edit'),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        _SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Top 5',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: primaryText,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minWidth: 140,
-                        maxWidth: 190,
-                      ),
-                      child: DropdownButtonFormField<_TopFiveCategory>(
-                        initialValue: _topFiveCategory,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Category',
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
-                          ),
-                        ),
-                        selectedItemBuilder: (context) => _TopFiveCategory
-                            .values
-                            .map(
-                              (category) => Row(
-                                children: [
-                                  Icon(
-                                    _topFiveCategoryIcon(category),
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      _topFiveCategoryLabel(category),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                            .toList(growable: false),
-                        items: _TopFiveCategory.values
-                            .map(
-                              (category) => DropdownMenuItem<_TopFiveCategory>(
-                                value: category,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _topFiveCategoryIcon(category),
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(_topFiveCategoryLabel(category)),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(growable: false),
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() {
-                            _topFiveCategory = value;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Column(
-                children: topFiveItems
-                    .asMap()
-                    .entries
-                    .map(
-                      (entry) => _TopFiveListItem(
-                        item: entry.value,
-                        rank: entry.key + 1,
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _SectionCard(
-          child: Column(
-            children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  'Spotify Connected',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: primaryText,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                value: _spotifyConnected,
-                onChanged: (enabled) {
-                  setState(() {
-                    _spotifyConnected = enabled;
-                  });
-                },
-              ),
-              if (_spotifyConnected)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF22C55E),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Connected and syncing',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: secondaryText,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Wrap(
-                        spacing: 4,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Spotify refreshed.'),
-                                ),
-                              );
-                            },
-                            child: const Text('Refresh'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _spotifyConnected = false;
-                              });
-                            },
-                            child: const Text('Disconnect'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -1080,79 +701,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _editUniversityYear(
-    ProfileViewState state,
-    int currentYear,
-  ) async {
-    if (widget.userId != null || state.header == null) return;
-    final now = DateTime.now().year;
-    var selectedYear = currentYear.clamp(now - 1, now + 8);
-    final year = await showModalBottomSheet<int>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Select graduation year',
-                    style: Theme.of(sheetContext).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: selectedYear,
-                    items: [
-                      for (var y = now - 1; y <= now + 8; y++)
-                        DropdownMenuItem(value: y, child: Text('Class of $y')),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setModalState(() => selectedYear = value);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () =>
-                          Navigator.of(sheetContext).pop(selectedYear),
-                      child: const Text('Save year'),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-    if (year == null) return;
-
-    try {
-      final base = _parseEditableProfileData(
-        state.header!,
-        fallbackSpotifyConnected: _spotifyConnected,
-      );
-      final next = base.copyWith(graduationYear: year);
-      await widget.viewModel.saveBio(_buildBioFromEditableProfileData(next));
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('University year updated.')));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update university year.')),
-      );
-    }
-  }
-
   Future<void> _pickProfilePhoto() async {
     if (widget.userId != null) return;
     try {
@@ -1220,21 +768,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  IconData _followActionIcon(ProfileViewState state) {
-    switch (state.followRelationStatus) {
-      case FollowRelationStatus.pendingIncoming:
-        return Icons.check_rounded;
-      case FollowRelationStatus.pendingOutgoing:
-        return Icons.schedule_rounded;
-      case FollowRelationStatus.accepted:
-        return Icons.check_rounded;
-      case FollowRelationStatus.self:
-        return Icons.person_rounded;
-      case FollowRelationStatus.none:
-        return Icons.person_add_alt_1_rounded;
-    }
-  }
-
   String _followActionLabel(ProfileViewState state) {
     switch (state.followRelationStatus) {
       case FollowRelationStatus.pendingIncoming:
@@ -1260,219 +793,204 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class _ProfilePanel extends StatelessWidget {
-  const _ProfilePanel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: isLight
-            ? Colors.white.withValues(alpha: 0.90)
-            : const Color(0xE81E232D),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isLight ? const Color(0xFFDDE4F5) : const Color(0xFF323C52),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isLight ? 0.10 : 0.24),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: isLight ? 0.06 : 0.10),
-            blurRadius: 26,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isLight ? const Color(0xFFF6F8FF) : const Color(0xFF171D29),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isLight ? const Color(0xFFD7DEEE) : const Color(0xFF2E3647),
-        ),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _ProfileStatChip extends StatelessWidget {
-  const _ProfileStatChip({
-    required this.label,
-    required this.value,
-    required this.icon,
+class _ProfilePalette {
+  const _ProfilePalette({
+    required this.backgroundGradient,
+    required this.appBarColor,
+    required this.primaryText,
+    required this.panelColor,
+    required this.panelBorderColor,
+    required this.panelShadowColor,
+    required this.panelGlowColor,
+    required this.sectionCardColor,
+    required this.sectionCardBorderColor,
+    required this.statChipColor,
+    required this.statChipTextColor,
+    required this.listItemCardColor,
+    required this.listItemCardBorderColor,
+    required this.variantChipColor,
+    required this.variantChipBorderColor,
+    required this.variantChipTextColor,
+    required this.variantChipActiveColor,
+    required this.variantChipActiveTextColor,
   });
 
-  final String label;
+  final List<Color> backgroundGradient;
+  final Color appBarColor;
+  final Color primaryText;
+  final Color panelColor;
+  final Color panelBorderColor;
+  final Color panelShadowColor;
+  final Color panelGlowColor;
+  final Color sectionCardColor;
+  final Color sectionCardBorderColor;
+  final Color statChipColor;
+  final Color statChipTextColor;
+  final Color listItemCardColor;
+  final Color listItemCardBorderColor;
+  final Color variantChipColor;
+  final Color variantChipBorderColor;
+  final Color variantChipTextColor;
+  final Color variantChipActiveColor;
+  final Color variantChipActiveTextColor;
+
+  static _ProfilePalette forStyle(LoginStyleVariant style) {
+    switch (style) {
+      case LoginStyleVariant.modernLight:
+        return _ProfilePalette(
+          backgroundGradient: const [
+            Color(0xFFF2F3F8),
+            Color(0xFFEFF1F7),
+            Color(0xFFE8ECF6),
+          ],
+          appBarColor: const Color(0xFFF2F3F8),
+          primaryText: const Color(0xFF111827),
+          panelColor: Colors.white.withValues(alpha: 0.92),
+          panelBorderColor: const Color(0xFFDDE4F5),
+          panelShadowColor: const Color(0x1A000000),
+          panelGlowColor: const Color(0x155F46FF),
+          sectionCardColor: const Color(0xFFF6F8FF),
+          sectionCardBorderColor: const Color(0xFFD7DEEE),
+          statChipColor: const Color(0xFF5F46FF),
+          statChipTextColor: Colors.white,
+          listItemCardColor: Colors.white,
+          listItemCardBorderColor: const Color(0xFFE2E8F3),
+          variantChipColor: const Color(0xFFE8ECF5),
+          variantChipBorderColor: const Color(0xFFD7DFEB),
+          variantChipTextColor: const Color(0xFF546072),
+          variantChipActiveColor: const Color(0xFF5F46FF),
+          variantChipActiveTextColor: Colors.white,
+        );
+      case LoginStyleVariant.darkMode:
+        return _ProfilePalette(
+          backgroundGradient: const [
+            Color(0xFF0E1230),
+            Color(0xFF090D24),
+            Color(0xFF131A3C),
+          ],
+          appBarColor: const Color(0xFF0E1230),
+          primaryText: Colors.white,
+          panelColor: const Color(0xE81E232D),
+          panelBorderColor: const Color(0xFF323C52),
+          panelShadowColor: const Color(0x3D000000),
+          panelGlowColor: const Color(0x1F5F46FF),
+          sectionCardColor: const Color(0xFF171D29),
+          sectionCardBorderColor: const Color(0xFF2E3647),
+          statChipColor: const Color(0xFF2D3A52),
+          statChipTextColor: Colors.white,
+          listItemCardColor: const Color(0xFF1D2431),
+          listItemCardBorderColor: const Color(0xFF2B3445),
+          variantChipColor: const Color(0xFF171E3A),
+          variantChipBorderColor: const Color(0xFF2D3A52),
+          variantChipTextColor: const Color(0xFFAFB9CC),
+          variantChipActiveColor: const Color(0xFF5F46FF),
+          variantChipActiveTextColor: Colors.white,
+        );
+      case LoginStyleVariant.gradientVibe:
+        return _ProfilePalette(
+          backgroundGradient: const [
+            Color(0xFF6C4BFF),
+            Color(0xFFF26A70),
+            Color(0xFFFFB05A),
+          ],
+          appBarColor: const Color(0x336C4BFF),
+          primaryText: Colors.white,
+          panelColor: Colors.white.withValues(alpha: 0.14),
+          panelBorderColor: Colors.white.withValues(alpha: 0.26),
+          panelShadowColor: const Color(0x33000000),
+          panelGlowColor: const Color(0x2BFFFFFF),
+          sectionCardColor: Colors.white.withValues(alpha: 0.17),
+          sectionCardBorderColor: Colors.white.withValues(alpha: 0.32),
+          statChipColor: Colors.white.withValues(alpha: 0.20),
+          statChipTextColor: Colors.white,
+          listItemCardColor: Colors.white.withValues(alpha: 0.15),
+          listItemCardBorderColor: Colors.white.withValues(alpha: 0.28),
+          variantChipColor: Colors.white.withValues(alpha: 0.12),
+          variantChipBorderColor: Colors.white.withValues(alpha: 0.24),
+          variantChipTextColor: Colors.white70,
+          variantChipActiveColor: Colors.white,
+          variantChipActiveTextColor: const Color(0xFF6A4CFF),
+        );
+      case LoginStyleVariant.glassmorphism:
+        return _ProfilePalette(
+          backgroundGradient: const [
+            Color(0xFFDCD4F5),
+            Color(0xFFC8BEEB),
+            Color(0xFFB3D5F0),
+          ],
+          appBarColor: const Color(0x40FFFFFF),
+          primaryText: Colors.white,
+          panelColor: Colors.white.withValues(alpha: 0.24),
+          panelBorderColor: Colors.white.withValues(alpha: 0.40),
+          panelShadowColor: const Color(0x26000000),
+          panelGlowColor: const Color(0x196A4BFF),
+          sectionCardColor: Colors.white.withValues(alpha: 0.30),
+          sectionCardBorderColor: Colors.white.withValues(alpha: 0.46),
+          statChipColor: const Color(0xFF6A4BFF),
+          statChipTextColor: Colors.white,
+          listItemCardColor: Colors.white.withValues(alpha: 0.32),
+          listItemCardBorderColor: Colors.white.withValues(alpha: 0.48),
+          variantChipColor: Colors.white.withValues(alpha: 0.24),
+          variantChipBorderColor: Colors.white.withValues(alpha: 0.46),
+          variantChipTextColor: const Color(0xFFEAF0FF),
+          variantChipActiveColor: const Color(0xFF6A4BFF),
+          variantChipActiveTextColor: Colors.white,
+        );
+      case LoginStyleVariant.minimalClean:
+        return _ProfilePalette(
+          backgroundGradient: const [
+            Color(0xFFF8F8FA),
+            Color(0xFFF4F4F7),
+            Color(0xFFF1F2F6),
+          ],
+          appBarColor: const Color(0xFFF8F8FA),
+          primaryText: const Color(0xFF111827),
+          panelColor: Colors.white,
+          panelBorderColor: const Color(0xFFD5D9E2),
+          panelShadowColor: const Color(0x15000000),
+          panelGlowColor: const Color(0x14090909),
+          sectionCardColor: const Color(0xFFF7F8FB),
+          sectionCardBorderColor: const Color(0xFFD7DFEB),
+          statChipColor: const Color(0xFF111111),
+          statChipTextColor: Colors.white,
+          listItemCardColor: Colors.white,
+          listItemCardBorderColor: const Color(0xFFDDE2EB),
+          variantChipColor: const Color(0xFFF0F2F6),
+          variantChipBorderColor: const Color(0xFFD7DFEB),
+          variantChipTextColor: const Color(0xFF6B7280),
+          variantChipActiveColor: const Color(0xFF111111),
+          variantChipActiveTextColor: Colors.white,
+        );
+    }
+  }
+}
+
+class _InstagramStat extends StatelessWidget {
+  const _InstagramStat({required this.value, required this.label});
+
   final int value;
-  final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: isLight
-            ? Colors.white.withValues(alpha: 0.24)
-            : Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            '$value $label',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
+    return Column(
+      children: [
+        Text(
+          '$value',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Colors.black,
+            fontWeight: FontWeight.w800,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopFiveItem {
-  const _TopFiveItem({
-    required this.title,
-    required this.subtitle,
-    required this.seed,
-    required this.icon,
-  });
-
-  final String title;
-  final String subtitle;
-  final String seed;
-  final IconData icon;
-}
-
-String _topFiveCategoryLabel(_TopFiveCategory category) {
-  switch (category) {
-    case _TopFiveCategory.tracks:
-      return 'Tracks';
-    case _TopFiveCategory.albums:
-      return 'Albums';
-    case _TopFiveCategory.artists:
-      return 'Artists';
-  }
-}
-
-IconData _topFiveCategoryIcon(_TopFiveCategory category) {
-  switch (category) {
-    case _TopFiveCategory.tracks:
-      return Icons.music_note_rounded;
-    case _TopFiveCategory.albums:
-      return Icons.album_rounded;
-    case _TopFiveCategory.artists:
-      return Icons.person_rounded;
-  }
-}
-
-class _TopFiveListItem extends StatelessWidget {
-  const _TopFiveListItem({required this.item, required this.rank});
-
-  final _TopFiveItem item;
-  final int rank;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = _seedGradient(item.seed);
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    final secondaryText = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: BoxDecoration(
-        color: isLight ? Colors.white : const Color(0xFF1D2431),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isLight ? const Color(0xFFE2E8F3) : const Color(0xFF2B3445),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$rank',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(width: 8),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: LinearGradient(colors: colors),
-            ),
-            child: Icon(item.icon, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  item.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: secondaryText),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1500,103 +1018,6 @@ String _displayNameFromUsername(String username) {
       .where((s) => s.isNotEmpty)
       .map((s) => '${s[0].toUpperCase()}${s.substring(1)}')
       .join(' ');
-}
-
-List<_TopFiveItem> _topItems(
-  ProfileHeader header,
-  ProfileViewState state,
-  _TopFiveCategory category,
-) {
-  final tracks = <_TopFiveItem>[];
-  for (final post in state.posts) {
-    for (final attachment in post.attachments) {
-      if (attachment.type != 'spotify_link') continue;
-      final url = attachment.url ?? '';
-      if (url.trim().isEmpty) continue;
-      final uri = Uri.tryParse(url);
-      final host = uri?.host.isNotEmpty == true ? uri!.host : 'Spotify link';
-      final segment = (uri?.pathSegments.isNotEmpty == true)
-          ? uri!.pathSegments.last
-          : 'Track';
-      tracks.add(
-        _TopFiveItem(
-          title:
-              'Track ${segment.length > 10 ? segment.substring(0, 10) : segment}',
-          subtitle: host,
-          seed: url,
-          icon: Icons.music_note_rounded,
-        ),
-      );
-    }
-  }
-
-  if (tracks.isEmpty) {
-    final fallbackGenres = header.preferredGenres.isEmpty
-        ? const ['House', 'Afrobeats', 'Lo-Fi', 'Pop', 'Indie']
-        : header.preferredGenres.take(5).toList(growable: false);
-    for (final genre in fallbackGenres) {
-      tracks.add(
-        _TopFiveItem(
-          title: '$genre Session',
-          subtitle: 'Student playlist',
-          seed: genre,
-          icon: Icons.music_note_rounded,
-        ),
-      );
-    }
-  }
-
-  final baseGenres = header.preferredGenres.isEmpty
-      ? const ['Electronic', 'Hip-Hop', 'Indie', 'Pop', 'Jazz']
-      : header.preferredGenres;
-  final albums = baseGenres
-      .take(5)
-      .map((genre) {
-        return _TopFiveItem(
-          title: '$genre Essentials',
-          subtitle: 'Top album mix',
-          seed: 'album-$genre',
-          icon: Icons.album_rounded,
-        );
-      })
-      .toList(growable: false);
-  final artists = baseGenres
-      .take(5)
-      .map((genre) {
-        return _TopFiveItem(
-          title: '$genre Collective',
-          subtitle: 'Artist spotlight',
-          seed: 'artist-$genre',
-          icon: Icons.person_rounded,
-        );
-      })
-      .toList(growable: false);
-
-  switch (category) {
-    case _TopFiveCategory.tracks:
-      return tracks.take(5).toList(growable: false);
-    case _TopFiveCategory.albums:
-      return albums;
-    case _TopFiveCategory.artists:
-      return artists;
-  }
-}
-
-List<Color> _seedGradient(String seed) {
-  final hash = seed.hashCode;
-  final first = Color.fromARGB(
-    255,
-    80 + ((hash >> 4) & 0x6F),
-    70 + ((hash >> 2) & 0x5F),
-    110 + ((hash >> 5) & 0x6F),
-  );
-  final second = Color.fromARGB(
-    255,
-    70 + ((hash >> 7) & 0x5F),
-    80 + ((hash >> 3) & 0x6F),
-    120 + ((hash >> 1) & 0x6F),
-  );
-  return [first, second];
 }
 
 String _bioWithoutClassYear(String? bio) {
