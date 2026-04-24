@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:mobile/features/profile_view/domain/entities/profile.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
+import 'package:mobile/ui/core/widgets/app_avatar.dart';
 
 class ProfileHeaderWidget extends StatelessWidget {
   const ProfileHeaderWidget({
@@ -31,21 +32,14 @@ class ProfileHeaderWidget extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isLight = Theme.of(context).brightness == Brightness.light;
     final usernameInitial = header.username.isNotEmpty
         ? header.username[0].toUpperCase()
         : '?';
     final imageProvider = _profileImageProvider();
 
-    final mutedTextColor = isLight
-        ? const Color(0xFF5F6C80)
-        : const Color(0xFFAAB3C4);
-    final surfaceColor = isLight
-        ? const Color(0xFFF7FAFC)
-        : const Color(0xFF161B23);
-    final borderColor = isLight
-        ? const Color(0xFFD8E2F0)
-        : const Color(0xFF2D3442);
+    final mutedTextColor = colorScheme.onSurfaceVariant;
+    final surfaceColor = colorScheme.surfaceContainerLowest;
+    final borderColor = colorScheme.outlineVariant;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,21 +62,17 @@ class ProfileHeaderWidget extends StatelessWidget {
                       onTap: canEdit ? onEditPhoto : null,
                       child: Stack(
                         children: [
-                          CircleAvatar(
+                          AppAvatar(
                             radius: 34,
-                            backgroundColor: isLight
-                                ? const Color(0xFFDDE6F4)
-                                : const Color(0xFF30394B),
-                            backgroundImage: imageProvider,
-                            child: imageProvider == null
-                                ? Text(
-                                    usernameInitial,
-                                    style: textTheme.headlineSmall?.copyWith(
-                                      color: colorScheme.onSurface,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  )
-                                : null,
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest,
+                            imageProvider: imageProvider,
+                            fallbackText: usernameInitial,
+                            fallbackTextStyle: textTheme.headlineSmall
+                                ?.copyWith(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
                           if (canEdit)
                             Positioned(
@@ -92,15 +82,13 @@ class ProfileHeaderWidget extends StatelessWidget {
                                 width: 22,
                                 height: 22,
                                 decoration: BoxDecoration(
-                                  color: isLight
-                                      ? const Color(0xFFE9EFF9)
-                                      : Colors.white,
+                                  color: colorScheme.surface,
                                   borderRadius: BorderRadius.circular(999),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.camera_alt,
                                   size: 12,
-                                  color: Color(0xFF111827),
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -142,15 +130,13 @@ class ProfileHeaderWidget extends StatelessWidget {
                         width: 34,
                         height: 34,
                         decoration: BoxDecoration(
-                          color: isLight
-                              ? const Color(0xFFE9EFF9)
-                              : Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.edit,
                           size: 18,
-                          color: Color(0xFF111827),
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -196,12 +182,8 @@ class ProfileHeaderWidget extends StatelessWidget {
                 children: header.preferredGenres.map((g) {
                   return Chip(
                     label: Text(g),
-                    backgroundColor: isLight
-                        ? const Color(0xFFE9EFF9)
-                        : const Color(0xFF2A3342),
-                    labelStyle: TextStyle(
-                      color: isLight ? const Color(0xFF111827) : Colors.white,
-                    ),
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    labelStyle: TextStyle(color: colorScheme.onSurface),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(999),
                     ),
@@ -239,7 +221,7 @@ class _StatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
+    final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -258,9 +240,7 @@ class _StatItem extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isLight
-                    ? const Color(0xFF5F6C80)
-                    : const Color(0xFFAAB3C4),
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],

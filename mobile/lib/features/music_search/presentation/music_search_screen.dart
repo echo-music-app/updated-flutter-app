@@ -11,6 +11,8 @@ import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
 import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
+import 'package:mobile/ui/core/widgets/tab_accent_strip.dart';
+import 'package:mobile/ui/core/widgets/trend_surfaces.dart';
 
 class MusicSearchScreen extends StatefulWidget {
   const MusicSearchScreen({super.key, required this.viewModel});
@@ -48,69 +50,128 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.sm,
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                  ),
+        child: DecoratedBox(
+          decoration: appTrendBackground(context),
+          child: Column(
+            children: [
+              const TabAccentStrip(tab: AppBottomNavTab.search),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                  AppSpacing.md,
+                  AppSpacing.sm,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Semantics(
-                    label: l10n.searchSubmitLabel,
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _searchFocusNode,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        hintText: l10n.searchInputHint,
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_controller.text.trim().isNotEmpty)
-                              IconButton(
-                                icon: const Icon(Icons.close_rounded),
-                                tooltip: 'Clear',
-                                onPressed: () {
-                                  _controller.clear();
-                                  setState(() {});
-                                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.15),
+                        Theme.of(
+                          context,
+                        ).colorScheme.tertiary.withValues(alpha: 0.10),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outlineVariant.withValues(alpha: 0.45),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.shadow.withValues(alpha: 0.10),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Discover Songs, Artists & Friends',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Search across your campus vibe in one place.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 10),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant
+                                .withValues(alpha: 0.28),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          child: Semantics(
+                            label: l10n.searchSubmitLabel,
+                            child: TextField(
+                              controller: _controller,
+                              focusNode: _searchFocusNode,
+                              textInputAction: TextInputAction.search,
+                              onSubmitted: (_) => _submit(),
+                              decoration: InputDecoration(
+                                hintText: l10n.searchInputHint,
+                                border: InputBorder.none,
+                                prefixIcon: const Icon(Icons.search_rounded),
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_controller.text.trim().isNotEmpty)
+                                      IconButton(
+                                        icon: const Icon(Icons.close_rounded),
+                                        tooltip: 'Clear',
+                                        onPressed: () {
+                                          _controller.clear();
+                                          setState(() {});
+                                        },
+                                      ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.arrow_forward_rounded,
+                                      ),
+                                      tooltip: l10n.searchSubmitLabel,
+                                      onPressed: _submit,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward_rounded),
-                              tooltip: l10n.searchSubmitLabel,
-                              onPressed: _submit,
+                              onChanged: (_) => setState(() {}),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                      onChanged: (_) => setState(() {}),
-                    ),
+                    ],
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: ListenableBuilder(
-                listenable: widget.viewModel,
-                builder: (context, _) =>
-                    _buildBody(context, widget.viewModel.state, l10n),
+              Expanded(
+                child: ListenableBuilder(
+                  listenable: widget.viewModel,
+                  builder: (context, _) =>
+                      _buildBody(context, widget.viewModel.state, l10n),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: const AppBottomNavBar(
@@ -126,31 +187,38 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
   ) {
     switch (state.status) {
       case SearchScreenStatus.idle:
-        return Center(child: Text(l10n.searchIdlePrompt));
+        return _stateCard(
+          context: context,
+          icon: Icons.travel_explore_rounded,
+          title: 'Start exploring',
+          subtitle: l10n.searchIdlePrompt,
+        );
 
       case SearchScreenStatus.loading:
         return const Center(child: CircularProgressIndicator());
 
       case SearchScreenStatus.error:
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.searchErrorMessage),
-              SizedBox(height: AppSpacing.md),
-              Semantics(
-                label: l10n.searchRetryLabel,
-                child: ElevatedButton(
-                  onPressed: widget.viewModel.retryLastQuery,
-                  child: Text(l10n.searchRetryLabel),
-                ),
-              ),
-            ],
+        return _stateCard(
+          context: context,
+          icon: Icons.error_outline_rounded,
+          title: 'Search failed',
+          subtitle: l10n.searchErrorMessage,
+          action: Semantics(
+            label: l10n.searchRetryLabel,
+            child: ElevatedButton(
+              onPressed: widget.viewModel.retryLastQuery,
+              child: Text(l10n.searchRetryLabel),
+            ),
           ),
         );
 
       case SearchScreenStatus.authRequired:
-        return Center(child: Text(l10n.searchAuthRequiredMessage));
+        return _stateCard(
+          context: context,
+          icon: Icons.lock_outline_rounded,
+          title: 'Session expired',
+          subtitle: l10n.searchAuthRequiredMessage,
+        );
 
       case SearchScreenStatus.data:
       case SearchScreenStatus.empty:
@@ -221,7 +289,12 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
     AppLocalizations l10n,
   ) {
     if (state.status == SearchScreenStatus.empty) {
-      return Center(child: Text(_emptyMessage(state.selectedType, l10n)));
+      return _stateCard(
+        context: context,
+        icon: Icons.search_off_rounded,
+        title: 'No matches',
+        subtitle: _emptyMessage(state.selectedType, l10n),
+      );
     }
 
     final results = state.results;
@@ -284,5 +357,50 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
       case SearchResultType.users:
         return results.users.length;
     }
+  }
+
+  Widget _stateCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Widget? action,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: TrendPanel(
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 30,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                if (action != null) ...[const SizedBox(height: 12), action],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

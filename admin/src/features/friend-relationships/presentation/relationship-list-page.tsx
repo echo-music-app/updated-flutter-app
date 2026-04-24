@@ -38,8 +38,13 @@ export function RelationshipListPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Friend Relationships</h2>
+    <div className="admin-page">
+      <div>
+        <h2 className="admin-page-title">Friend Relationships</h2>
+        <p className="admin-page-subtitle mt-1">
+          Audit relationship states and resolve moderation requests
+        </p>
+      </div>
       <DataTable
         columns={columns}
         data={data?.items ?? []}

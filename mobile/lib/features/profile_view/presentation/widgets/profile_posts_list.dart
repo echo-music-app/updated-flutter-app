@@ -31,18 +31,11 @@ class ProfilePostsList extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    final cardColor = isLight ? Colors.white : const Color(0xFF1E232D);
-    final borderColor = isLight
-        ? const Color(0xFFE5E7EB)
-        : const Color(0xFF2D3442);
-    final mutedTextColor = isLight
-        ? const Color(0xFF6B7280)
-        : const Color(0xFFB8C0D0);
-    final bodyTextColor = isLight
-        ? const Color(0xFF374151)
-        : const Color(0xFFE5E7EB);
-    final titleTextColor = isLight ? const Color(0xFF111827) : Colors.white;
+    final cardColor = colorScheme.surfaceContainerLowest;
+    final borderColor = colorScheme.outlineVariant;
+    final mutedTextColor = colorScheme.onSurfaceVariant;
+    final bodyTextColor = colorScheme.onSurface;
+    final titleTextColor = colorScheme.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,21 +69,20 @@ class ProfilePostsList extends StatelessWidget {
                 post.attachments,
               );
               return InkWell(
-                key: ValueKey(post.id),
                 borderRadius: BorderRadius.circular(20),
                 onTap: () => _openPostDetail(context, post, posts, index),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: cardColor,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: borderColor),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x22000000),
-                        blurRadius: 12,
-                        offset: Offset(0, 4),
+                        color: colorScheme.shadow.withValues(alpha: 0.10),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
@@ -101,13 +93,14 @@ class ProfilePostsList extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 16,
-                            backgroundColor: const Color(0xFFE5E7EB),
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest,
                             child: Text(
                               post.userId.isNotEmpty
                                   ? post.userId[0].toUpperCase()
                                   : '?',
-                              style: const TextStyle(
-                                color: Color(0xFF111827),
+                              style: TextStyle(
+                                color: colorScheme.onSurface,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -133,15 +126,11 @@ class ProfilePostsList extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const Icon(Icons.more_vert, color: Color(0xFF6B7280)),
+                          _privacyPill(
+                            context: context,
+                            label: _privacyCaption(post.privacy),
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _privacyCaption(post.privacy),
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: bodyTextColor,
-                        ),
                       ),
                       const SizedBox(height: 10),
                       if (textAttachment != null)
@@ -153,57 +142,95 @@ class ProfilePostsList extends StatelessWidget {
                           ),
                         ),
                       if (spotifyAttachment != null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.music_note_rounded, size: 18),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                spotifyAttachment.url!,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: mutedTextColor,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer.withValues(
+                              alpha: 0.58,
                             ),
-                          ],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.music_note_rounded,
+                                size: 18,
+                                color: colorScheme.onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  spotifyAttachment.url!,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onPrimaryContainer,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                       if (textAttachment == null && spotifyAttachment == null)
                         Container(
-                          height: 72,
+                          height: 96,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: isLight
-                                ? const Color(0xFFF3F4F6)
-                                : const Color(0xFF2D3442),
+                            borderRadius: BorderRadius.circular(14),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                colorScheme.primary.withValues(alpha: 0.22),
+                                colorScheme.tertiary.withValues(alpha: 0.14),
+                              ],
+                            ),
                           ),
                           child: Center(
                             child: Text(
-                              'Post created',
+                              'Campus story update',
                               style: textTheme.bodyMedium?.copyWith(
-                                color: mutedTextColor,
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                         ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${post.attachments.length} attachment(s)',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: mutedTextColor,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => _openCommentsSheet(context, post),
-                          icon: const Icon(Icons.mode_comment_outlined, size: 18),
-                          label: const Text('Comments'),
-                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${post.attachments.length} attachment(s)',
+                              style: textTheme.labelMedium?.copyWith(
+                                color: mutedTextColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: () => _openCommentsSheet(context, post),
+                            icon: const Icon(
+                              Icons.mode_comment_outlined,
+                              size: 18,
+                            ),
+                            label: const Text('Comments'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -237,6 +264,25 @@ class ProfilePostsList extends StatelessWidget {
     );
   }
 
+  Widget _privacyPill({required BuildContext context, required String label}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: scheme.primary,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.15,
+        ),
+      ),
+    );
+  }
+
   Future<void> _openPostDetail(
     BuildContext context,
     ProfilePostSummary post,
@@ -260,7 +306,7 @@ class ProfilePostsList extends StatelessWidget {
   }
 
   String _privacyCaption(String privacy) {
-    return 'Visibility: ${privacy.toUpperCase()}';
+    return privacy.toUpperCase();
   }
 
   String _safeShortId(String id) {
@@ -317,9 +363,9 @@ class ProfilePostsList extends StatelessWidget {
             children: [
               Text(
                 'Comments',
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               if (comments.isEmpty)
@@ -333,8 +379,7 @@ class ProfilePostsList extends StatelessWidget {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: comments.length,
-                    separatorBuilder: (_, index) =>
-                        const Divider(height: 16),
+                    separatorBuilder: (_, index) => const Divider(height: 16),
                     itemBuilder: (context, index) {
                       final comment = comments[index];
                       return Text.rich(
@@ -367,18 +412,12 @@ class _DemoSongPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    final cardColor = isLight ? Colors.white : const Color(0xFF1E232D);
-    final borderColor = isLight
-        ? const Color(0xFFE5E7EB)
-        : const Color(0xFF2D3442);
-    final titleTextColor = isLight ? const Color(0xFF111827) : Colors.white;
-    final mutedTextColor = isLight
-        ? const Color(0xFF6B7280)
-        : const Color(0xFFB8C0D0);
-    final bodyTextColor = isLight
-        ? const Color(0xFF374151)
-        : const Color(0xFFE5E7EB);
+    final colorScheme = Theme.of(context).colorScheme;
+    final cardColor = colorScheme.surface;
+    final borderColor = colorScheme.outlineVariant;
+    final titleTextColor = colorScheme.onSurface;
+    final mutedTextColor = colorScheme.onSurfaceVariant;
+    final bodyTextColor = colorScheme.onSurface;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(12),
@@ -399,10 +438,14 @@ class _DemoSongPostCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 16,
-                backgroundColor: Color(0xFFE5E7EB),
-                child: Icon(Icons.person, size: 16, color: Color(0xFF111827)),
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  Icons.person,
+                  size: 16,
+                  color: colorScheme.onSurface,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -428,13 +471,13 @@ class _DemoSongPostCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5EDFF),
+                  color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   'DEMO',
                   style: textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF1E40AF),
+                    color: colorScheme.onPrimaryContainer,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

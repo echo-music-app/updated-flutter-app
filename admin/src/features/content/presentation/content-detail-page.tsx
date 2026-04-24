@@ -36,23 +36,23 @@ export function ContentDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Content Review</h2>
-        <p className="text-sm text-muted-foreground">ID: {content.id}</p>
-        <p className="text-sm mt-1">
+    <div className="admin-page">
+      <div className="admin-panel">
+        <h2 className="admin-page-title">Content Review</h2>
+        <p className="mt-1 text-sm text-muted-foreground">ID: {content.id}</p>
+        <p className="mt-2 text-sm">
           Status: <span className="font-medium">{content.status}</span>
         </p>
         <p className="text-sm">Type: {content.content_type}</p>
       </div>
 
       {feedback && (
-        <div role="alert" className="rounded-md bg-primary/10 px-3 py-2 text-sm">
+        <div role="alert" className="admin-panel border-primary/30 bg-primary/10 text-sm">
           {feedback}
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="admin-panel space-y-4">
         <AdminActionForm
           title="Remove Content"
           onSubmit={({ reason }) => handleAction("remove", { reason })}

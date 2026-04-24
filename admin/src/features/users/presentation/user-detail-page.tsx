@@ -33,23 +33,23 @@ export function UserDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">{user.username}</h2>
-        <p className="text-muted-foreground">{user.email}</p>
-        <p className="text-sm mt-1">
+    <div className="admin-page">
+      <div className="admin-panel">
+        <h2 className="admin-page-title">{user.username}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
+        <p className="mt-2 text-sm">
           Status: <span className="font-medium">{user.status}</span>
         </p>
       </div>
 
       {feedback && (
-        <div role="alert" className="rounded-md bg-primary/10 px-3 py-2 text-sm">
+        <div role="alert" className="admin-panel border-primary/30 bg-primary/10 text-sm">
           {feedback}
         </div>
       )}
 
-      <div className="border rounded-lg p-4 space-y-4">
-        <h3 className="font-medium">Change Status</h3>
+      <div className="admin-panel space-y-4">
+        <h3 className="text-base font-semibold">Change Status</h3>
         <div className="flex gap-2 flex-wrap">
           {["active", "restricted", "suspended"].map((status) => (
             <AdminActionForm

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/routing/routes.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
+import 'package:mobile/ui/core/themes/login_style_controller.dart';
 import 'package:mobile/ui/core/themes/theme_mode_controller.dart';
 import 'package:mobile/ui/core/widgets/app_sidebar_drawer.dart';
 import 'package:mobile/ui/login/login_view_model.dart';
@@ -22,15 +23,18 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
+  LoginStyleVariant _activeStyle = LoginStyleVariant.modernLight;
   static const _rememberEmailKey = 'remember_me_email';
   static const _rememberPasswordKey = 'remember_me_password';
-  static const _bgTop = Color(0xFF0B1222);
-  static const _bgBottom = Color(0xFF050912);
+  static const _bgTop = Color(0xFFF2F3F8);
+  static const _bgBottom = Color(0xFFEFF1F7);
+  static const _bgTopDark = Color(0xFF0E1230);
+  static const _bgBottomDark = Color(0xFF090D24);
+  static const _accentStart = Color(0xFF7454FF);
+  static const _accentEnd = Color(0xFF5F46FF);
   static const _fieldBg = Color(0xFF0D1118);
   static const _fieldBorder = Color(0xFF222A36);
   static const _textMuted = Color(0xFF9BA7BA);
-  static const _purpleStart = Color(0xFF7C3AED);
-  static const _purpleEnd = Color(0xFF5B5FFB);
   static const _spotifyGreen = Color(0xFF1ED760);
   static const _soundCloudOrange = Color(0xFFFF7700);
   static const _socialLogoSize = 56.0;
@@ -55,21 +59,198 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscureConfirmPassword = true;
   bool _isLightMode = false;
   bool _rememberMe = false;
+  bool get _isMinimal => _activeStyle == LoginStyleVariant.minimalClean;
+  bool get _showDecorativeShapes =>
+      _activeStyle != LoginStyleVariant.minimalClean;
 
-  Color get _bgTopColor => _isLightMode ? const Color(0xFFF7F9FC) : _bgTop;
-  Color get _bgBottomColor =>
-      _isLightMode ? const Color(0xFFEFF3FA) : _bgBottom;
-  Color get _fieldBgColor => _isLightMode ? const Color(0xFFF5F7FB) : _fieldBg;
-  Color get _fieldBorderColor =>
-      _isLightMode ? const Color(0xFFD8E0EC) : _fieldBorder;
-  Color get _textPrimaryColor =>
-      _isLightMode ? const Color(0xFF111827) : Colors.white;
-  Color get _textMutedColor =>
-      _isLightMode ? const Color(0xFF5B6678) : _textMuted;
-  Color get _themeChipBg =>
-      _isLightMode ? const Color(0xFFF3F6FC) : const Color(0xAA0D1118);
-  Color get _themeChipBorder =>
-      _isLightMode ? const Color(0xFFD7DFEB) : const Color(0xFF2D3A52);
+  List<Color> get _backgroundGradientColors => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const [_bgTop, _bgBottom],
+    LoginStyleVariant.darkMode => const [_bgTopDark, _bgBottomDark],
+    LoginStyleVariant.gradientVibe => const [
+      Color(0xFF6C4BFF),
+      Color(0xFFF26A70),
+    ],
+    LoginStyleVariant.glassmorphism => const [
+      Color(0xFFDCD4F5),
+      Color(0xFFC8BEEB),
+    ],
+    LoginStyleVariant.minimalClean => const [
+      Color(0xFFF8F8FA),
+      Color(0xFFF4F4F7),
+    ],
+  };
+  Color get _accentStartColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => _accentStart,
+    LoginStyleVariant.darkMode => _accentStart,
+    LoginStyleVariant.gradientVibe => const Color(0xFF7C5CFF),
+    LoginStyleVariant.glassmorphism => const Color(0xFF7A5BFF),
+    LoginStyleVariant.minimalClean => const Color(0xFF7E57FF),
+  };
+  Color get _accentEndColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => _accentEnd,
+    LoginStyleVariant.darkMode => _accentEnd,
+    LoginStyleVariant.gradientVibe => const Color(0xFF6D4BFF),
+    LoginStyleVariant.glassmorphism => const Color(0xFF6A4BFF),
+    LoginStyleVariant.minimalClean => const Color(0xFF111111),
+  };
+  List<Color> get _socialTileGradientColors => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const [
+      Color(0x00FFFFFF),
+      Color(0x00FFFFFF),
+    ],
+    LoginStyleVariant.darkMode => const [Color(0x00FFFFFF), Color(0x00FFFFFF)],
+    LoginStyleVariant.gradientVibe => const [
+      Color(0x00FFFFFF),
+      Color(0x00FFFFFF),
+    ],
+    LoginStyleVariant.glassmorphism => const [
+      Color(0x40FFFFFF),
+      Color(0x35FFFFFF),
+    ],
+    LoginStyleVariant.minimalClean => const [
+      Color(0x00FFFFFF),
+      Color(0x00FFFFFF),
+    ],
+  };
+  Color get _fieldBgColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFFF5F7FB),
+    LoginStyleVariant.darkMode => _fieldBg,
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.08),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.34),
+    LoginStyleVariant.minimalClean => const Color(0xFFF7F8FB),
+  };
+  Color get _fieldBorderColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFFD8E0EC),
+    LoginStyleVariant.darkMode => _fieldBorder,
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.35),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.48),
+    LoginStyleVariant.minimalClean => const Color(0xFFD5D9E2),
+  };
+  Color get _textPrimaryColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFF111827),
+    LoginStyleVariant.darkMode => Colors.white,
+    LoginStyleVariant.gradientVibe => Colors.white,
+    LoginStyleVariant.glassmorphism => Colors.white,
+    LoginStyleVariant.minimalClean => const Color(0xFF111827),
+  };
+  Color get _textMutedColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFF5B6678),
+    LoginStyleVariant.darkMode => _textMuted,
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.74),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.74),
+    LoginStyleVariant.minimalClean => const Color(0xFF6B7280),
+  };
+  Color get _themeChipBorder => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFFD7DFEB),
+    LoginStyleVariant.darkMode => const Color(0xFF2D3A52),
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.28),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.46),
+    LoginStyleVariant.minimalClean => const Color(0xFFD7DFEB),
+  };
+  Color get _primaryButtonBackground => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => _accentEndColor,
+    LoginStyleVariant.darkMode => _accentEndColor,
+    LoginStyleVariant.gradientVibe => Colors.white,
+    LoginStyleVariant.glassmorphism => _accentEndColor,
+    LoginStyleVariant.minimalClean => const Color(0xFF090909),
+  };
+  Color get _primaryButtonForeground => switch (_activeStyle) {
+    LoginStyleVariant.gradientVibe => const Color(0xFF6A4CFF),
+    _ => Colors.white,
+  };
+  EdgeInsets get _formContentPadding => EdgeInsets.all(AppSpacing.lg);
+  double get _headerBodyGap => AppSpacing.lg;
+  double get _topControlInset => 14;
+  Color get _socialTileBorderColor => switch (_activeStyle) {
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.24),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.32),
+    _ => Colors.transparent,
+  };
+  List<BoxShadow> get _socialTileShadows => switch (_activeStyle) {
+    LoginStyleVariant.gradientVibe => const [],
+    LoginStyleVariant.minimalClean => const [],
+    _ => [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: _isLightMode ? 0.06 : 0.22),
+        blurRadius: 14,
+        offset: const Offset(0, 8),
+      ),
+    ],
+  };
+  Color get _pendingCardBg => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFFF3F7FF),
+    LoginStyleVariant.darkMode => const Color(0xFF131C2A),
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.10),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.16),
+    LoginStyleVariant.minimalClean => const Color(0xFFF6F8FC),
+  };
+  Color get _pendingCardBorder => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFFD5E1F2),
+    LoginStyleVariant.darkMode => const Color(0xFF22314A),
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.28),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.36),
+    LoginStyleVariant.minimalClean => const Color(0xFFD5DFEF),
+  };
+  Color get _errorCardBg => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFF34161A),
+    LoginStyleVariant.darkMode => const Color(0xFF34161A),
+    LoginStyleVariant.gradientVibe => const Color(0x66B91C1C),
+    LoginStyleVariant.glassmorphism => const Color(0x55B91C1C),
+    LoginStyleVariant.minimalClean => const Color(0xFFFEECEC),
+  };
+  Color get _errorCardBorder => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFF5B222B),
+    LoginStyleVariant.darkMode => const Color(0xFF5B222B),
+    LoginStyleVariant.gradientVibe => const Color(0x99FCA5A5),
+    LoginStyleVariant.glassmorphism => const Color(0x99FCA5A5),
+    LoginStyleVariant.minimalClean => const Color(0xFFFCA5A5),
+  };
+  Color get _errorTextColor => switch (_activeStyle) {
+    LoginStyleVariant.minimalClean => const Color(0xFF991B1B),
+    _ => const Color(0xFFFFCDD2),
+  };
+  Color get _successTextColor => switch (_activeStyle) {
+    LoginStyleVariant.gradientVibe => const Color(0xFFE7FFE9),
+    LoginStyleVariant.glassmorphism => const Color(0xFFE9FFEF),
+    _ => const Color(0xFF4ADE80),
+  };
+  Color get _dangerTextColor => switch (_activeStyle) {
+    LoginStyleVariant.gradientVibe => const Color(0xFFFFE2E2),
+    LoginStyleVariant.glassmorphism => const Color(0xFFFFE2E2),
+    _ => const Color(0xFFFCA5A5),
+  };
+  Color get _mutedControlColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xFF9BA7BA),
+    LoginStyleVariant.darkMode => const Color(0xFF9BA7BA),
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.72),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.74),
+    LoginStyleVariant.minimalClean => const Color(0xFF9BA7BA),
+  };
+  Color get _shellBgColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => Colors.white.withValues(alpha: 0.82),
+    LoginStyleVariant.darkMode => const Color(0xCC0E1428),
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.10),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.22),
+    LoginStyleVariant.minimalClean => Colors.transparent,
+  };
+  Color get _shellBorderColor => switch (_activeStyle) {
+    LoginStyleVariant.modernLight => const Color(0xDDE1E8F5),
+    LoginStyleVariant.darkMode => const Color(0xFF2C3550),
+    LoginStyleVariant.gradientVibe => Colors.white.withValues(alpha: 0.30),
+    LoginStyleVariant.glassmorphism => Colors.white.withValues(alpha: 0.38),
+    LoginStyleVariant.minimalClean => Colors.transparent,
+  };
+  List<BoxShadow> get _shellShadows => switch (_activeStyle) {
+    LoginStyleVariant.minimalClean => const [],
+    LoginStyleVariant.gradientVibe => const [],
+    _ => [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: _isLightMode ? 0.10 : 0.32),
+        blurRadius: 30,
+        offset: const Offset(0, 14),
+      ),
+    ],
+  };
 
   @override
   void initState() {
@@ -170,7 +351,12 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    _isLightMode = Theme.of(context).brightness == Brightness.light;
+    _activeStyle = context.watch<LoginStyleController>().style;
+    _isLightMode = switch (_activeStyle) {
+      LoginStyleVariant.darkMode => false,
+      LoginStyleVariant.gradientVibe => false,
+      _ => true,
+    };
     final themeController = context.watch<ThemeModeController>();
     final isDarkMode = themeController.isDarkMode;
     return Scaffold(
@@ -179,55 +365,55 @@ class _LoginScreenState extends State<LoginScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [_bgTopColor, _bgBottomColor],
+            colors: _backgroundGradientColors,
           ),
         ),
         child: Stack(
           children: [
-            Positioned(
-              top: -90,
-              right: -35,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.84, end: 1),
-                duration: const Duration(milliseconds: 1300),
-                curve: Curves.easeOutCubic,
-                builder: (_, scale, child) =>
-                    Transform.scale(scale: scale, child: child),
-                child: Container(
-                  width: 230,
-                  height: 230,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _purpleStart.withValues(
-                      alpha: _isLightMode ? 0.10 : 0.16,
+            if (_showDecorativeShapes)
+              Positioned(
+                top: -90,
+                right: -35,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.84, end: 1),
+                  duration: const Duration(milliseconds: 1300),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, scale, child) =>
+                      Transform.scale(scale: scale, child: child),
+                  child: Container(
+                    width: 230,
+                    height: 230,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _accentStartColor.withValues(
+                        alpha: _isLightMode ? 0.10 : 0.16,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: -120,
-              left: -70,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.9, end: 1),
-                duration: const Duration(milliseconds: 1500),
-                curve: Curves.easeOutCubic,
-                builder: (_, scale, child) =>
-                    Transform.scale(scale: scale, child: child),
-                child: Container(
-                  width: 260,
-                  height: 260,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color:
-                        (_isLightMode
-                                ? const Color(0xFF4F8DFD)
-                                : const Color(0xFF4B6BFF))
-                            .withValues(alpha: _isLightMode ? 0.10 : 0.12),
+            if (_showDecorativeShapes)
+              Positioned(
+                bottom: -120,
+                left: -70,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.9, end: 1),
+                  duration: const Duration(milliseconds: 1500),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, scale, child) =>
+                      Transform.scale(scale: scale, child: child),
+                  child: Container(
+                    width: 260,
+                    height: 260,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _accentEndColor.withValues(
+                        alpha: _isLightMode ? 0.12 : 0.14,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
             Center(
               child: SingleChildScrollView(
                 keyboardDismissBehavior:
@@ -239,8 +425,7 @@ class _LoginScreenState extends State<LoginScreen>
                     opacity: _fadeIn,
                     child: SlideTransition(
                       position: _slideIn,
-                      child: Padding(
-                        padding: EdgeInsets.all(AppSpacing.lg),
+                      child: _formShell(
                         child: ListenableBuilder(
                           listenable: widget.viewModel,
                           builder: (context, _) {
@@ -280,7 +465,12 @@ class _LoginScreenState extends State<LoginScreen>
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       _buildHeader(_isLogin),
-                                      SizedBox(height: AppSpacing.lg),
+                                      SizedBox(height: AppSpacing.md),
+                                      if (pending == null) ...[
+                                        _modeSwitchTabs(),
+                                        SizedBox(height: _headerBodyGap),
+                                      ] else
+                                        SizedBox(height: AppSpacing.sm),
                                       if (pending != null) ...[
                                         _buildPendingCard(
                                           pending.message,
@@ -309,10 +499,6 @@ class _LoginScreenState extends State<LoginScreen>
                                         ),
                                         SizedBox(height: AppSpacing.md),
                                       ],
-                                      _isLogin
-                                          ? _highlightHint('Welcome back')
-                                          : _sectionHint('Create your profile'),
-                                      SizedBox(height: AppSpacing.sm),
                                       _label(l10n.email),
                                       _emailField(),
                                       SizedBox(height: AppSpacing.md),
@@ -384,32 +570,87 @@ class _LoginScreenState extends State<LoginScreen>
                                       ],
                                       if (_isLogin && pending == null) ...[
                                         SizedBox(height: AppSpacing.sm),
-                                        CheckboxListTile(
-                                          dense: true,
-                                          contentPadding: EdgeInsets.zero,
-                                          controlAffinity:
-                                              ListTileControlAffinity.leading,
-                                          activeColor: _purpleStart,
-                                          value: _rememberMe,
-                                          onChanged: widget.viewModel.isLoading
-                                              ? null
-                                              : (value) async {
-                                                  final next = value ?? false;
-                                                  setState(
-                                                    () => _rememberMe = next,
-                                                  );
-                                                  if (!next) {
-                                                    await _syncRememberedCredentials();
-                                                  }
-                                                },
-                                          title: Text(
-                                            'Remember me',
-                                            style: TextStyle(
-                                              color: _textPrimaryColor,
-                                              fontWeight: FontWeight.w600,
+                                        if (_isMinimal)
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: CheckboxListTile(
+                                                  dense: true,
+                                                  contentPadding:
+                                                      EdgeInsets.zero,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity
+                                                          .leading,
+                                                  activeColor:
+                                                      _accentStartColor,
+                                                  value: _rememberMe,
+                                                  onChanged:
+                                                      widget.viewModel.isLoading
+                                                      ? null
+                                                      : (value) async {
+                                                          final next =
+                                                              value ?? false;
+                                                          setState(
+                                                            () => _rememberMe =
+                                                                next,
+                                                          );
+                                                          if (!next) {
+                                                            await _syncRememberedCredentials();
+                                                          }
+                                                        },
+                                                  title: Text(
+                                                    'Remember me',
+                                                    style: TextStyle(
+                                                      color: _textPrimaryColor,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              TextButton(
+                                                onPressed:
+                                                    widget.viewModel.isLoading
+                                                    ? null
+                                                    : () {},
+                                                child: Text(
+                                                  'Forgot password?',
+                                                  style: TextStyle(
+                                                    color: _accentStartColor,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        else
+                                          CheckboxListTile(
+                                            dense: true,
+                                            contentPadding: EdgeInsets.zero,
+                                            controlAffinity:
+                                                ListTileControlAffinity.leading,
+                                            activeColor: _accentStartColor,
+                                            value: _rememberMe,
+                                            onChanged:
+                                                widget.viewModel.isLoading
+                                                ? null
+                                                : (value) async {
+                                                    final next = value ?? false;
+                                                    setState(
+                                                      () => _rememberMe = next,
+                                                    );
+                                                    if (!next) {
+                                                      await _syncRememberedCredentials();
+                                                    }
+                                                  },
+                                            title: Text(
+                                              'Remember me',
+                                              style: TextStyle(
+                                                color: _textPrimaryColor,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                             ),
                                           ),
-                                        ),
                                       ],
                                       if (pending != null) ...[
                                         SizedBox(height: AppSpacing.md),
@@ -427,7 +668,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           ),
                                         ),
                                       ],
-                                      SizedBox(height: AppSpacing.lg),
+                                      SizedBox(height: _headerBodyGap),
                                       _submitButton(l10n, pending != null),
                                       if (pending == null) ...[
                                         SizedBox(height: AppSpacing.sm),
@@ -447,7 +688,8 @@ class _LoginScreenState extends State<LoginScreen>
                                         ),
                                       ],
                                       SizedBox(height: AppSpacing.md),
-                                      if (pending == null) _switchModeButton(),
+                                      if (pending == null && _isMinimal)
+                                        _switchModeButton(),
                                       SizedBox(height: AppSpacing.sm),
                                       _buildTfaStatus(),
                                     ],
@@ -464,43 +706,32 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
             Positioned(
-              top: 14,
-              left: 14,
+              top: _topControlInset,
+              left: _topControlInset,
               child: SafeArea(
                 child: Builder(
                   builder: (context) => Material(
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () => showAppSidebar(context),
+                      onTap: () {
+                        if (_isMinimal && Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                          return;
+                        }
+                        showAppSidebar(context);
+                      },
                       child: SizedBox(
                         width: 48,
                         height: 48,
-                        child: Center(child: _sidebarMenuIcon()),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 14,
-              right: 14,
-              child: SafeArea(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => themeController.toggle(),
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: Center(
-                        child: Icon(
-                          isDarkMode
-                              ? Icons.light_mode_rounded
-                              : Icons.dark_mode_rounded,
-                          color: _textPrimaryColor,
+                        child: Center(
+                          child: _isMinimal
+                              ? Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: _textPrimaryColor,
+                                  size: 20,
+                                )
+                              : _sidebarMenuIcon(),
                         ),
                       ),
                     ),
@@ -508,8 +739,124 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
+            Positioned(
+              top: _topControlInset,
+              right: _topControlInset,
+              child: _isMinimal
+                  ? const SizedBox.shrink()
+                  : SafeArea(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => themeController.toggle(),
+                          child: SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: Center(
+                              child: Icon(
+                                isDarkMode
+                                    ? Icons.light_mode_rounded
+                                    : Icons.dark_mode_rounded,
+                                color: _textPrimaryColor,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _formShell({required Widget child}) {
+    if (_activeStyle == LoginStyleVariant.minimalClean) {
+      return Padding(padding: _formContentPadding, child: child);
+    }
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: _shellBgColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: _shellBorderColor),
+        boxShadow: _shellShadows,
+      ),
+      child: Padding(padding: _formContentPadding, child: child),
+    );
+  }
+
+  Widget _modeSwitchTabs() {
+    Widget tab({
+      required String label,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 170),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: selected
+                ? LinearGradient(colors: [_accentStartColor, _accentEndColor])
+                : null,
+            color: selected ? null : Colors.transparent,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: widget.viewModel.isLoading ? null : onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: selected ? Colors.white : _textMutedColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _fieldBgColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _fieldBorderColor),
+      ),
+      child: Row(
+        children: [
+          tab(
+            label: 'Sign In',
+            selected: _isLogin,
+            onTap: () {
+              if (_isLogin) return;
+              _toggleMode();
+            },
+          ),
+          const SizedBox(width: 4),
+          tab(
+            label: 'Sign Up',
+            selected: !_isLogin,
+            onTap: () {
+              if (!_isLogin) return;
+              _toggleMode();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -517,7 +864,12 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildHeader(bool isLogin) {
     final width = MediaQuery.of(context).size.width;
     final logoSize = width < 380 ? 64.0 : 76.0;
-    final subtitleSize = width < 380 ? 18.0 : 22.0;
+    final subtitleSize = width < 380 ? 15.0 : 16.0;
+    final headlineSize = switch (_activeStyle) {
+      LoginStyleVariant.gradientVibe => 32.0,
+      LoginStyleVariant.minimalClean => 30.0,
+      _ => 31.0,
+    };
     return Column(
       children: [
         TweenAnimationBuilder<double>(
@@ -541,22 +893,39 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
         SizedBox(height: AppSpacing.md),
-        Container(
-          width: 78,
-          height: 4,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            gradient: const LinearGradient(colors: [_purpleStart, _purpleEnd]),
+        if (_activeStyle != LoginStyleVariant.minimalClean)
+          Container(
+            width: 78,
+            height: 4,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              gradient: LinearGradient(
+                colors: [_accentStartColor, _accentEndColor],
+              ),
+            ),
           ),
+        SizedBox(
+          height: _activeStyle == LoginStyleVariant.minimalClean
+              ? AppSpacing.sm
+              : AppSpacing.md,
         ),
-        SizedBox(height: AppSpacing.md),
         Text(
-          isLogin ? 'Sign in to your account' : 'Create your account',
+          'Welcome back',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _textPrimaryColor,
+            fontSize: headlineSize,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        SizedBox(height: AppSpacing.xs),
+        Text(
+          isLogin ? 'Sign in to continue' : 'Create your account',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _textMutedColor,
             fontSize: subtitleSize,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -567,11 +936,9 @@ class _LoginScreenState extends State<LoginScreen>
     return Container(
       padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: _isLightMode ? const Color(0xFFF3F7FF) : const Color(0xFF131C2A),
+        color: _pendingCardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isLightMode ? const Color(0xFFD5E1F2) : Colors.transparent,
-        ),
+        border: Border.all(color: _pendingCardBorder),
       ),
       child: Text(
         debugCode == null ? message : '$message (debug code: $debugCode)',
@@ -584,11 +951,11 @@ class _LoginScreenState extends State<LoginScreen>
     return Container(
       padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: const Color(0xFF34161A),
+        color: _errorCardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF5B222B)),
+        border: Border.all(color: _errorCardBorder),
       ),
-      child: Text(message, style: const TextStyle(color: Color(0xFFFFCDD2))),
+      child: Text(message, style: TextStyle(color: _errorTextColor)),
     );
   }
 
@@ -669,9 +1036,7 @@ class _LoginScreenState extends State<LoginScreen>
             _obscurePassword
                 ? Icons.visibility_off_rounded
                 : Icons.visibility_rounded,
-            color: _obscurePassword
-                ? const Color(0xFF9BA7BA)
-                : const Color(0xFF7C3AED),
+            color: _obscurePassword ? _mutedControlColor : _accentStartColor,
           ),
           tooltip: _obscurePassword ? 'Show password' : 'Hide password',
         ),
@@ -741,8 +1106,8 @@ class _LoginScreenState extends State<LoginScreen>
                 ? Icons.visibility_off_rounded
                 : Icons.visibility_rounded,
             color: _obscureConfirmPassword
-                ? const Color(0xFF9BA7BA)
-                : const Color(0xFF7C3AED),
+                ? _mutedControlColor
+                : _accentStartColor,
           ),
           tooltip: _obscureConfirmPassword
               ? 'Show confirm password'
@@ -777,7 +1142,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Text(
       isMatch ? 'Passwords match' : 'Passwords do not match',
       style: TextStyle(
-        color: isMatch ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5),
+        color: isMatch ? _successTextColor : _dangerTextColor,
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
@@ -785,6 +1150,11 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _submitButton(AppLocalizations l10n, bool hasPending) {
+    final useGradientButton =
+        _activeStyle == LoginStyleVariant.modernLight ||
+        _activeStyle == LoginStyleVariant.darkMode ||
+        _activeStyle == LoginStyleVariant.glassmorphism;
+
     return SizedBox(
       height: 56,
       child: ElevatedButton(
@@ -792,34 +1162,55 @@ class _LoginScreenState extends State<LoginScreen>
             ? null
             : (hasPending ? _verifyEmail : _submit),
         style: ElevatedButton.styleFrom(
-          backgroundColor: _purpleEnd,
-          foregroundColor: Colors.white,
-          elevation: 8,
-          shadowColor: _purpleStart.withValues(alpha: 0.45),
+          backgroundColor: useGradientButton
+              ? Colors.transparent
+              : _primaryButtonBackground,
+          foregroundColor: _primaryButtonForeground,
+          elevation: _activeStyle == LoginStyleVariant.minimalClean ? 0 : 8,
+          shadowColor: _accentStartColor.withValues(alpha: 0.45),
+          side: _activeStyle == LoginStyleVariant.minimalClean
+              ? BorderSide(color: Colors.black.withValues(alpha: 0.9))
+              : null,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
-        child: widget.viewModel.isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                hasPending
-                    ? 'Verify Email'
-                    : (_isLogin ? 'Sign In' : l10n.register),
-              ),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: useGradientButton
+                ? LinearGradient(colors: [_accentStartColor, _accentEndColor])
+                : null,
+          ),
+          child: Center(
+            child: widget.viewModel.isLoading
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        useGradientButton
+                            ? Colors.white
+                            : _primaryButtonForeground,
+                      ),
+                    ),
+                  )
+                : Text(
+                    hasPending
+                        ? 'Verify Email'
+                        : (_isLogin ? 'Sign In' : l10n.register),
+                  ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _socialLoginRow() {
+    final heading = _highlightHint('Or continue with', forceCenter: true);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -828,44 +1219,62 @@ class _LoginScreenState extends State<LoginScreen>
             Expanded(child: Divider(color: _themeChipBorder)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: _highlightHint('Or continue with'),
+              child: heading,
             ),
             Expanded(child: Divider(color: _themeChipBorder)),
           ],
         ),
         SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _socialTile(
-                label: 'Spotify',
-                onTap: widget.viewModel.isLoading
-                    ? null
-                    : widget.viewModel.connectWithSpotify,
-                child: _spotifyLogo(),
-              ),
-            ),
-            SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _socialTile(
-                label: 'SoundCloud',
-                onTap: widget.viewModel.isLoading
-                    ? null
-                    : widget.viewModel.loginWithSoundCloud,
-                child: _soundCloudLogo(),
-              ),
-            ),
-            SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _socialTile(
-                label: 'Apple',
-                onTap: widget.viewModel.isLoading
-                    ? null
-                    : widget.viewModel.loginWithApple,
-                child: _appleLogo(),
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final spacing = AppSpacing.sm;
+            final maxWidth = constraints.hasBoundedWidth
+                ? constraints.maxWidth
+                : MediaQuery.of(context).size.width;
+            final availableWidth = (maxWidth - (spacing * 2)).clamp(
+              0.0,
+              double.infinity,
+            );
+            final itemWidth = (availableWidth / 3)
+                .clamp(96.0, 220.0)
+                .toDouble();
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: [
+                SizedBox(
+                  width: itemWidth,
+                  child: _socialTile(
+                    label: 'Spotify',
+                    onTap: widget.viewModel.isLoading
+                        ? null
+                        : widget.viewModel.connectWithSpotify,
+                    child: _spotifyLogo(),
+                  ),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _socialTile(
+                    label: 'SoundCloud',
+                    onTap: widget.viewModel.isLoading
+                        ? null
+                        : widget.viewModel.loginWithSoundCloud,
+                    child: _soundCloudLogo(),
+                  ),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _socialTile(
+                    label: 'Apple',
+                    onTap: widget.viewModel.isLoading
+                        ? null
+                        : widget.viewModel.loginWithApple,
+                    child: _appleLogo(),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -876,48 +1285,54 @@ class _LoginScreenState extends State<LoginScreen>
     required Widget child,
     required VoidCallback? onTap,
   }) {
+    final tileRadius = _activeStyle == LoginStyleVariant.minimalClean
+        ? 14.0
+        : 22.0;
+    final tileHeight = switch (_activeStyle) {
+      LoginStyleVariant.minimalClean => 98.0,
+      LoginStyleVariant.gradientVibe => 110.0,
+      _ => 124.0,
+    };
+    final tileHasSurface = _activeStyle == LoginStyleVariant.glassmorphism;
     return Semantics(
       button: true,
       label: _isLogin ? 'Sign in with $label' : 'Sign up with $label',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Ink(
-          height: 124,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: _themeChipBorder),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: _isLightMode ? 0.06 : 0.22,
-                ),
-                blurRadius: 14,
-                offset: const Offset(0, 8),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 160),
+        opacity: onTap == null ? 0.6 : 1,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(tileRadius),
+          child: Ink(
+            height: tileHeight,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(tileRadius),
+              border: Border.all(color: _socialTileBorderColor),
+              boxShadow: _socialTileShadows,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: _socialTileGradientColors,
               ),
-            ],
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: _isLightMode
-                  ? const [Color(0xFFF9FBFF), Color(0xFFF0F5FE)]
-                  : const [Color(0xFF101722), Color(0xFF0A0F18)],
+              color: tileHasSurface
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : null,
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              child,
-              SizedBox(height: AppSpacing.xs),
-              Text(
-                label,
-                style: TextStyle(
-                  color: _textPrimaryColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                child,
+                SizedBox(height: AppSpacing.xs),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: _textPrimaryColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -925,10 +1340,27 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _spotifyLogo() {
+    if (_activeStyle == LoginStyleVariant.gradientVibe ||
+        _activeStyle == LoginStyleVariant.minimalClean) {
+      return Container(
+        width: _socialLogoSize,
+        height: _socialLogoSize,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: _activeStyle == LoginStyleVariant.minimalClean
+              ? Border.all(color: _themeChipBorder)
+              : null,
+        ),
+        child: const Center(
+          child: Icon(Icons.album_rounded, color: _spotifyGreen, size: 30),
+        ),
+      );
+    }
     return Container(
       width: _socialLogoSize,
       height: _socialLogoSize,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Color(0xFF121212),
         borderRadius: BorderRadius.all(
           Radius.circular(_socialLogoCornerRadius),
@@ -955,6 +1387,23 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _appleLogo() {
+    if (_activeStyle == LoginStyleVariant.gradientVibe ||
+        _activeStyle == LoginStyleVariant.minimalClean) {
+      return Container(
+        width: _socialLogoSize,
+        height: _socialLogoSize,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: _activeStyle == LoginStyleVariant.minimalClean
+              ? Border.all(color: _themeChipBorder)
+              : null,
+        ),
+        child: const Center(
+          child: Icon(Icons.apple, size: 30, color: Colors.black),
+        ),
+      );
+    }
     return Container(
       width: _socialLogoSize,
       height: _socialLogoSize,
@@ -973,6 +1422,23 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _soundCloudLogo() {
+    if (_activeStyle == LoginStyleVariant.gradientVibe ||
+        _activeStyle == LoginStyleVariant.minimalClean) {
+      return Container(
+        width: _socialLogoSize,
+        height: _socialLogoSize,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: _activeStyle == LoginStyleVariant.minimalClean
+              ? Border.all(color: _themeChipBorder)
+              : null,
+        ),
+        child: const Center(
+          child: Icon(Icons.cloud_rounded, size: 30, color: _soundCloudOrange),
+        ),
+      );
+    }
     return Container(
       width: _socialLogoSize,
       height: _socialLogoSize,
@@ -1020,13 +1486,9 @@ class _LoginScreenState extends State<LoginScreen>
       width: double.infinity,
       padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: _isLightMode ? const Color(0xFFF3F7FF) : const Color(0xFF131C2A),
+        color: _pendingCardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isLightMode
-              ? const Color(0xFFD5E1F2)
-              : const Color(0xFF22314A),
-        ),
+        border: Border.all(color: _pendingCardBorder),
       ),
       child: Text(
         widget.viewModel.supportsTfa
@@ -1053,6 +1515,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _sidebarMenuIcon() {
     final lineColor = _isLightMode ? const Color(0xFF1A2233) : Colors.white;
+    const widths = [12.0, 16.0, 22.0];
     Widget line(double width) => Container(
       width: width,
       height: 4,
@@ -1068,49 +1531,24 @@ class _LoginScreenState extends State<LoginScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [line(12), line(16), line(22)],
+        children: [line(widths[0]), line(widths[1]), line(widths[2])],
       ),
     );
   }
 
-  Widget _sectionHint(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: _textMutedColor,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-
-  Widget _highlightHint(String text) {
+  Widget _highlightHint(String text, {bool forceCenter = false}) {
+    final align = forceCenter ? Alignment.center : Alignment.center;
     return Align(
-      alignment: Alignment.center,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: _isLightMode
-              ? const Color(0xFFEAF0FF)
-              : const Color(0xFF1A2340),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: _isLightMode
-                ? const Color(0xFFC9D6F8)
-                : const Color(0xFF334A7A),
-          ),
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: _isLightMode
-                ? const Color(0xFF243B76)
-                : const Color(0xFFDCE5FF),
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.2,
-          ),
+      alignment: align,
+      child: Text(
+        _activeStyle == LoginStyleVariant.minimalClean
+            ? text.toLowerCase()
+            : text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: _textMutedColor,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -1140,7 +1578,7 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _purpleEnd, width: 1.6),
+        borderSide: BorderSide(color: _accentEndColor, width: 1.6),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

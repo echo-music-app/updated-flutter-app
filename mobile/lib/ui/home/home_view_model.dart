@@ -5,6 +5,8 @@ enum HomeScreenState { loading, empty, error, data }
 
 enum PostPrivacy { public, friendsOnly, onlyMe }
 
+enum HomeFeedCategory { ibsFirstYear, ibsCorporateFinance, budapest, friends }
+
 class HomeFeedComment {
   const HomeFeedComment({
     required this.authorName,
@@ -44,6 +46,7 @@ class HomeFeedPost {
     this.commentCount = 0,
     this.currentUserLiked = false,
     this.comments = const <HomeFeedComment>[],
+    this.categories = const <HomeFeedCategory>{},
   });
 
   final String id;
@@ -59,6 +62,7 @@ class HomeFeedPost {
   final int commentCount;
   final bool currentUserLiked;
   final List<HomeFeedComment> comments;
+  final Set<HomeFeedCategory> categories;
 
   HomeFeedPost copyWith({
     String? id,
@@ -74,6 +78,7 @@ class HomeFeedPost {
     int? commentCount,
     bool? currentUserLiked,
     List<HomeFeedComment>? comments,
+    Set<HomeFeedCategory>? categories,
   }) {
     return HomeFeedPost(
       id: id ?? this.id,
@@ -89,6 +94,7 @@ class HomeFeedPost {
       commentCount: commentCount ?? this.commentCount,
       currentUserLiked: currentUserLiked ?? this.currentUserLiked,
       comments: comments ?? this.comments,
+      categories: categories ?? this.categories,
     );
   }
 }
@@ -105,8 +111,20 @@ class HomeViewModel extends ChangeNotifier {
   HomeScreenState _state = HomeScreenState.data;
   HomeScreenState get state => _state;
 
+  HomeFeedCategory _activeCategory = HomeFeedCategory.ibsFirstYear;
+  HomeFeedCategory get activeCategory => _activeCategory;
+
   List<HomeFeedPost> _posts = const [];
   List<HomeFeedPost> get posts => _posts;
+  List<HomeFeedPost> get filteredPosts => _posts
+      .where((post) => post.categories.contains(_activeCategory))
+      .toList(growable: false);
+
+  void setCategory(HomeFeedCategory category) {
+    if (_activeCategory == category) return;
+    _activeCategory = category;
+    notifyListeners();
+  }
 
   void _emit({required HomeScreenState state, List<HomeFeedPost>? posts}) {
     _state = state;
@@ -224,11 +242,16 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  void _updatePost(String postId, HomeFeedPost Function(HomeFeedPost post) map) {
-    final updated = _posts.map((post) {
-      if (post.id != postId) return post;
-      return map(post);
-    }).toList(growable: false);
+  void _updatePost(
+    String postId,
+    HomeFeedPost Function(HomeFeedPost post) map,
+  ) {
+    final updated = _posts
+        .map((post) {
+          if (post.id != postId) return post;
+          return map(post);
+        })
+        .toList(growable: false);
     _emit(state: _state, posts: updated);
   }
 

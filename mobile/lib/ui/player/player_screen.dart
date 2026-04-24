@@ -5,6 +5,7 @@ import 'package:mobile/ui/player/widgets/playback_controls.dart';
 import 'package:mobile/ui/player/widgets/seek_bar_widget.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
+import 'package:mobile/ui/core/widgets/trend_surfaces.dart';
 
 class PlayerScreen extends StatelessWidget {
   const PlayerScreen({super.key, required this.viewModel});
@@ -16,54 +17,74 @@ class PlayerScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.playerTitle)),
-      body: ListenableBuilder(
-        listenable: viewModel,
-        builder: (context, _) {
-          if (viewModel.isLoading) {
-            return _buildLoadingState(l10n);
-          }
-          if (viewModel.error != null) {
-            return _buildErrorState(context, l10n);
-          }
-          final controller = viewModel.controller!;
-          return ListenableBuilder(
-            listenable: controller,
-            builder: (context, _) {
-              if (controller.error != null) {
-                return _buildControllerErrorState(
-                  context,
-                  l10n,
-                  controller.error!,
-                );
-              }
-              if (controller.state.currentTrack == null) {
-                return _buildLoadingState(l10n);
-              }
-              return _buildDataState(context, l10n, controller);
-            },
-          );
-        },
+      body: DecoratedBox(
+        decoration: appTrendBackground(context),
+        child: ListenableBuilder(
+          listenable: viewModel,
+          builder: (context, _) {
+            if (viewModel.isLoading) {
+              return _buildLoadingState(l10n);
+            }
+            if (viewModel.error != null) {
+              return _buildErrorState(context, l10n);
+            }
+            final controller = viewModel.controller!;
+            return ListenableBuilder(
+              listenable: controller,
+              builder: (context, _) {
+                if (controller.error != null) {
+                  return _buildControllerErrorState(
+                    context,
+                    l10n,
+                    controller.error!,
+                  );
+                }
+                if (controller.state.currentTrack == null) {
+                  return _buildLoadingState(l10n);
+                }
+                return _buildDataState(context, l10n, controller);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _surfaceCard(BuildContext context, Widget child) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: TrendPanel(
+          borderRadius: BorderRadius.circular(22),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: child,
+        ),
       ),
     );
   }
 
   Widget _buildLoadingState(AppLocalizations l10n) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          SizedBox(height: AppSpacing.md),
-          Text(l10n.loadingTracks),
-        ],
+    return Builder(
+      builder: (context) => _surfaceCard(
+        context,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            SizedBox(height: AppSpacing.md),
+            Text(l10n.loadingTracks),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildErrorState(BuildContext context, AppLocalizations l10n) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.lg),
+    return _surfaceCard(
+      context,
+      Padding(
+        padding: EdgeInsets.zero,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -87,9 +108,10 @@ class PlayerScreen extends StatelessWidget {
     AppLocalizations l10n,
     String error,
   ) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.lg),
+    return _surfaceCard(
+      context,
+      Padding(
+        padding: EdgeInsets.zero,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -115,10 +137,11 @@ class PlayerScreen extends StatelessWidget {
   ) {
     final track = controller.state.currentTrack!;
     return SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Column(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: _surfaceCard(
+          context,
+          Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               AlbumArtWidget(imageUrl: track.albumArtUrl),

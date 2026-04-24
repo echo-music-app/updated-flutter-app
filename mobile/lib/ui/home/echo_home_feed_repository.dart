@@ -112,7 +112,13 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
       final rawItems = (data['items'] as List<dynamic>? ?? const []);
       final profileMap = await _loadUserProfiles(rawItems);
       final items = rawItems
-          .map((item) => _mapPost(item as Map<String, dynamic>, profileMap))
+          .map(
+            (item) => _mapPost(
+              item as Map<String, dynamic>,
+              profileMap,
+              includeFriendsCategory: true,
+            ),
+          )
           .whereType<HomeFeedPost>()
           .toList();
 
@@ -176,8 +182,9 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
 
   HomeFeedPost? _mapPost(
     Map<String, dynamic> map,
-    Map<String, _UserProfile> profileMap,
-  ) {
+    Map<String, _UserProfile> profileMap, {
+    bool includeFriendsCategory = false,
+  }) {
     final id = map['id'] as String?;
     final userId = map['user_id'] as String?;
     final createdAtRaw = map['created_at'] as String?;
@@ -211,6 +218,13 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
 
     final profile = profileMap[userId];
     final username = profile?.username ?? _fallbackName(userId);
+    final privacy = _mapPrivacy(map['privacy'] as String?);
+    final categories = _inferCategories(
+      text: text,
+      userName: username,
+      privacy: privacy,
+      includeFriendsCategory: includeFriendsCategory,
+    );
     return HomeFeedPost(
       id: id,
       userId: userId,
@@ -219,18 +233,21 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
       userAvatarUrl: profile?.avatarUrl,
       text: text,
       spotifyUrl: spotifyUrl,
-      privacy: _mapPrivacy(map['privacy'] as String?),
+      privacy: privacy,
       createdAt: DateTime.parse(createdAtRaw),
       likeCount: (map['like_count'] as num?)?.toInt() ?? 0,
       commentCount: (map['comment_count'] as num?)?.toInt() ?? 0,
       currentUserLiked: map['current_user_liked'] as bool? ?? false,
+      categories: categories,
     );
   }
 
   @override
   Future<HomeFeedPostEngagement> likePost(String postId) async {
     try {
-      final response = await _postWithAuthRetry('$_echoBaseUrl/v1/posts/$postId/likes');
+      final response = await _postWithAuthRetry(
+        '$_echoBaseUrl/v1/posts/$postId/likes',
+      );
       return _mapEngagement(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -242,7 +259,9 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
   @override
   Future<HomeFeedPostEngagement> unlikePost(String postId) async {
     try {
-      final response = await _deleteWithAuthRetry('$_echoBaseUrl/v1/posts/$postId/likes');
+      final response = await _deleteWithAuthRetry(
+        '$_echoBaseUrl/v1/posts/$postId/likes',
+      );
       return _mapEngagement(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -254,7 +273,9 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
   @override
   Future<List<HomeFeedComment>> listPostComments(String postId) async {
     try {
-      final response = await _getWithAuthRetry('$_echoBaseUrl/v1/posts/$postId/comments');
+      final response = await _getWithAuthRetry(
+        '$_echoBaseUrl/v1/posts/$postId/comments',
+      );
       final raw = response.data as List<dynamic>? ?? const [];
       return raw
           .map((item) => item as Map<String, dynamic>)
@@ -274,7 +295,10 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
   }
 
   @override
-  Future<HomeFeedComment> createPostComment(String postId, String content) async {
+  Future<HomeFeedComment> createPostComment(
+    String postId,
+    String content,
+  ) async {
     try {
       final response = await _postWithAuthRetry(
         '$_echoBaseUrl/v1/posts/$postId/comments',
@@ -316,6 +340,58 @@ class EchoHomeFeedRepository implements HomeFeedRepository {
   static String _fallbackName(String userId) {
     final short = userId.length <= 8 ? userId : userId.substring(0, 8);
     return 'User $short';
+  }
+
+  static Set<HomeFeedCategory> _inferCategories({
+    required String? text,
+    required String userName,
+    required PostPrivacy privacy,
+    required bool includeFriendsCategory,
+  }) {
+    final corpus = '${text ?? ''} $userName'.toLowerCase();
+    final inferred = <HomeFeedCategory>{};
+
+    if (includeFriendsCategory) {
+      // Posts loaded from following/friends feed should always be discoverable
+      // in the Friends tab.
+      inferred.add(HomeFeedCategory.friends);
+    }
+
+    if (_containsAny(corpus, const ['budapest', 'buda', 'pest', 'hungary'])) {
+      inferred.add(HomeFeedCategory.budapest);
+    }
+    if (_containsAny(corpus, const [
+      'finance',
+      'corporate',
+      'valuation',
+      'cfa',
+    ])) {
+      inferred.add(HomeFeedCategory.ibsCorporateFinance);
+    }
+    if (_containsAny(corpus, const [
+      'ibs',
+      'first year',
+      '1st year',
+      'freshman',
+    ])) {
+      inferred.add(HomeFeedCategory.ibsFirstYear);
+    }
+    if (privacy == PostPrivacy.friendsOnly ||
+        _containsAny(corpus, const ['friends', 'buddy', 'group study'])) {
+      inferred.add(HomeFeedCategory.friends);
+    }
+
+    if (inferred.isEmpty) {
+      inferred.add(HomeFeedCategory.ibsFirstYear);
+    }
+    return inferred;
+  }
+
+  static bool _containsAny(String source, List<String> keywords) {
+    for (final keyword in keywords) {
+      if (source.contains(keyword)) return true;
+    }
+    return false;
   }
 }
 

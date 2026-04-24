@@ -30,8 +30,13 @@ export function ContentListPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Content</h2>
+    <div className="admin-page">
+      <div>
+        <h2 className="admin-page-title">Content</h2>
+        <p className="admin-page-subtitle mt-1">
+          Review reported items and apply moderation actions
+        </p>
+      </div>
       <DataTable
         columns={columns}
         data={data?.items ?? []}

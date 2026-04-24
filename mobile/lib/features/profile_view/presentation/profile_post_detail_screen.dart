@@ -17,7 +17,8 @@ class ProfilePostDetailScreen extends StatefulWidget {
   addComment;
 
   @override
-  State<ProfilePostDetailScreen> createState() => _ProfilePostDetailScreenState();
+  State<ProfilePostDetailScreen> createState() =>
+      _ProfilePostDetailScreenState();
 }
 
 class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
@@ -108,11 +109,17 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Post')),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.surface,
+              Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.80),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+            ],
           ),
         ),
         child: RefreshIndicator(
@@ -126,13 +133,20 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      boxShadow: [
                         BoxShadow(
-                          color: Color(0x33000000),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.shadow.withValues(alpha: 0.13),
                           blurRadius: 20,
-                          offset: Offset(0, 8),
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -153,11 +167,8 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
                               Expanded(
                                 child: Text(
                                   'User ${_safeShortId(post.userId)}',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                               ),
                               Text(
@@ -224,7 +235,11 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
                             child: Text(
                               'View all ${comments.length} comments',
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: const Color(0xFF6B7280)),
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -242,7 +257,11 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
                             child: Text(
                               _humanDate(post.createdAt),
                               style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: const Color(0xFF9CA3AF)),
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                           ),
                         ],
@@ -324,6 +343,7 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
   }
 
   Widget _buildMediaBlock(BuildContext context, ProfilePostSummary post) {
+    final scheme = Theme.of(context).colorScheme;
     final textAttachment = _firstTextAttachment(post.attachments);
     final mediaAttachment = _firstMediaAttachment(post.attachments);
     final spotifyAttachment = _firstSpotifyAttachment(post.attachments);
@@ -338,22 +358,29 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
               mediaAttachment.url!,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
-                  _fallbackMedia(textAttachment),
+                  _fallbackMedia(context, textAttachment),
             )
           else if (spotifyAttachment != null)
             DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xFF1DB954), Color(0xFF121212)],
+                  colors: [
+                    scheme.primary.withValues(alpha: 0.92),
+                    scheme.tertiary.withValues(alpha: 0.86),
+                  ],
                 ),
               ),
               child: const Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.music_note_rounded, color: Colors.white, size: 42),
+                    Icon(
+                      Icons.music_note_rounded,
+                      color: Colors.white,
+                      size: 42,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'Spotify',
@@ -368,14 +395,14 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
               ),
             )
           else
-            _fallbackMedia(textAttachment),
+            _fallbackMedia(context, textAttachment),
           Positioned(
             top: 10,
             right: 10,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0x99000000),
+                color: Colors.black.withValues(alpha: 0.54),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -389,13 +416,19 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
     );
   }
 
-  Widget _fallbackMedia(PostAttachmentSummary? textAttachment) {
+  Widget _fallbackMedia(
+    BuildContext context,
+    PostAttachmentSummary? textAttachment,
+  ) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
+          begin: Alignment.topLeft,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF242424), Color(0xFF101010)],
+          colors: [
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.72),
+            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.82),
+          ],
         ),
       ),
       child: Center(
@@ -441,9 +474,9 @@ class _ProfilePostDetailScreenState extends State<ProfilePostDetailScreen> {
       );
     }
     if (comments.isEmpty) {
-      return const Text(
+      return Text(
         'No comments yet.',
-        style: TextStyle(color: Color(0xFF6B7280)),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       );
     }
     final preview = comments.take(2).toList(growable: false);

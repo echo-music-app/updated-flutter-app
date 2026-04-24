@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/routing/routes.dart';
+import 'package:mobile/ui/core/widgets/app_avatar.dart';
 import 'package:mobile/ui/core/widgets/app_bottom_nav_bar.dart';
 import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
+import 'package:mobile/ui/core/widgets/trend_surfaces.dart';
 import 'package:mobile/ui/friends/friends_repository.dart';
 import 'package:mobile/ui/friends/friends_view_model.dart';
 
@@ -47,9 +49,12 @@ class _FriendsScreenState extends State<FriendsScreen> {
               : 'Following',
         ),
       ),
-      body: ListenableBuilder(
-        listenable: widget.viewModel,
-        builder: (context, _) => _buildBody(context),
+      body: DecoratedBox(
+        decoration: appTrendBackground(context),
+        child: ListenableBuilder(
+          listenable: widget.viewModel,
+          builder: (context, _) => _buildBody(context),
+        ),
       ),
       bottomNavigationBar: const AppBottomNavBar(
         currentTab: AppBottomNavTab.profile,
@@ -124,11 +129,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
           ),
         );
       case FriendsState.data:
-        final filteredFriends = widget.viewModel.friends.where((friend) {
-          final q = _query.trim().toLowerCase();
-          if (q.isEmpty) return true;
-          return friend.username.toLowerCase().contains(q);
-        }).toList(growable: false);
+        final filteredFriends = widget.viewModel.friends
+            .where((friend) {
+              final q = _query.trim().toLowerCase();
+              if (q.isEmpty) return true;
+              return friend.username.toLowerCase().contains(q);
+            })
+            .toList(growable: false);
         return RefreshIndicator(
           onRefresh: widget.viewModel.load,
           child: ListView(
@@ -158,9 +165,28 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 onChanged: (value) => setState(() => _query = value),
               ),
               const SizedBox(height: 10),
-              Text(
-                '${filteredFriends.length} user(s)',
-                style: Theme.of(context).textTheme.bodySmall,
+              TrendPanel(
+                borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.groups_rounded,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${filteredFriends.length} user(s)',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               if (filteredFriends.isEmpty)
@@ -172,31 +198,35 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 ...filteredFriends.map(
                   (friend) => Column(
                     children: [
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 2),
-                        leading: CircleAvatar(
-                          backgroundImage: friend.avatarUrl != null
-                              ? NetworkImage(friend.avatarUrl!)
-                              : null,
-                          child: friend.avatarUrl == null
-                              ? Text(
-                                  friend.username.isNotEmpty
-                                      ? friend.username[0].toUpperCase()
-                                      : '?',
-                                )
-                              : null,
-                        ),
-                        title: Text(friend.username),
-                        subtitle: Text(
-                          widget.listType == FriendListType.followers
-                              ? 'Follower'
-                              : 'Following',
-                        ),
-                        onTap: () => context.push(
-                          '${Routes.profile}/${Uri.encodeComponent(friend.userId)}',
+                      TrendPanel(
+                        borderRadius: BorderRadius.circular(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                          leading: AppAvatar(
+                            radius: 20,
+                            imageProvider: friend.avatarUrl != null
+                                ? NetworkImage(friend.avatarUrl!)
+                                : null,
+                            fallbackText: friend.username.isNotEmpty
+                                ? friend.username[0].toUpperCase()
+                                : '?',
+                          ),
+                          title: Text(friend.username),
+                          subtitle: Text(
+                            widget.listType == FriendListType.followers
+                                ? 'Follower'
+                                : 'Following',
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push(
+                            '${Routes.profile}/${Uri.encodeComponent(friend.userId)}',
+                          ),
                         ),
                       ),
-                      const Divider(height: 1),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),

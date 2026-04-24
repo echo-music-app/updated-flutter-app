@@ -21,19 +21,21 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12 text-muted-foreground">Loading...</div>
+      <div className="admin-panel flex items-center justify-center py-12 text-sm text-muted-foreground">
+        Loading...
+      </div>
     );
   }
 
   return (
-    <div className="rounded-md border overflow-hidden">
+    <div className="overflow-hidden rounded-xl border bg-card/95 shadow-sm">
       <table className="w-full text-sm">
-        <thead className="bg-muted/50">
+        <thead className="bg-muted/60">
           <tr>
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className="px-4 py-3 text-left font-medium text-muted-foreground"
+                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {col.header}
               </th>
@@ -49,9 +51,9 @@ export function DataTable<T>({
             </tr>
           ) : (
             data.map((row) => (
-              <tr key={keyExtractor(row)} className="border-t hover:bg-muted/25 transition-colors">
+              <tr key={keyExtractor(row)} className="border-t transition-colors hover:bg-muted/30">
                 {columns.map((col) => (
-                  <td key={String(col.key)} className="px-4 py-3">
+                  <td key={String(col.key)} className="px-4 py-3.5">
                     {col.render
                       ? col.render(row)
                       : String((row as Record<string, unknown>)[String(col.key)] ?? "")}

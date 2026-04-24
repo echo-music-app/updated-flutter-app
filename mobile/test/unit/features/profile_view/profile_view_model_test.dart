@@ -75,6 +75,25 @@ class _FakeRepo implements ProfileRepository {
   }
 
   @override
+  Future<List<ProfilePostComment>> listPostComments(String postId) async =>
+      const [];
+
+  @override
+  Future<ProfilePostComment> createPostComment(
+    String postId,
+    String content,
+  ) async {
+    return ProfilePostComment(
+      id: 'c1',
+      postId: postId,
+      userId: 'u1',
+      username: 'tester',
+      content: content,
+      createdAt: DateTime(2026),
+    );
+  }
+
+  @override
   Future<ProfileHeader> updateOwnProfile({String? bio}) {
     throw UnimplementedError();
   }

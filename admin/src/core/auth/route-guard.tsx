@@ -22,8 +22,10 @@ export function RouteGuard({ children }: RouteGuardProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <span className="text-muted-foreground">Loading...</span>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="admin-panel text-center">
+          <span className="text-sm text-muted-foreground">Preparing admin workspace...</span>
+        </div>
       </div>
     );
   }

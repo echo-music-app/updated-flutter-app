@@ -27,8 +27,12 @@ ProfilePostSummary _post(String id) => ProfilePostSummary(
   updatedAt: DateTime(2026),
 );
 
+Future<List<ProfilePostComment>> _viewComments(String postId) async => const [];
+
+Future<ProfilePostComment?> _addComment(String postId, String content) async =>
+    null;
 void main() {
-  group('ProfilePostsList — empty state', () {
+  group('ProfilePostsList â€” empty state', () {
     testWidgets('shows empty message when no posts', (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -38,6 +42,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () {},
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
         ),
       );
@@ -45,7 +51,7 @@ void main() {
     });
   });
 
-  group('ProfilePostsList — data state', () {
+  group('ProfilePostsList â€” data state', () {
     testWidgets('renders post items', (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -55,6 +61,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () {},
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
         ),
       );
@@ -63,7 +71,7 @@ void main() {
     });
   });
 
-  group('ProfilePostsList — load-more', () {
+  group('ProfilePostsList â€” load-more', () {
     testWidgets('shows load more button when canLoadMore is true', (
       tester,
     ) async {
@@ -75,6 +83,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () {},
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
         ),
       );
@@ -91,6 +101,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () => tapped = true,
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
         ),
       );
@@ -107,6 +119,8 @@ void main() {
             isLoadingMore: true,
             onLoadMore: () {},
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
         ),
       );
@@ -123,6 +137,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () {},
             onRetryLoadMore: () => retried = true,
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
             hasLoadMoreError: true,
           ),
         ),
@@ -145,6 +161,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () {},
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
         ),
       );
@@ -159,6 +177,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () {},
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
         ),
       );
@@ -167,7 +187,7 @@ void main() {
     });
   });
 
-  group('ProfilePostsList — dark mode', () {
+  group('ProfilePostsList â€” dark mode', () {
     testWidgets('renders correctly in dark theme', (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -177,6 +197,8 @@ void main() {
             isLoadingMore: false,
             onLoadMore: () {},
             onRetryLoadMore: () {},
+            onViewComments: _viewComments,
+            onAddComment: _addComment,
           ),
           theme: AppTheme.dark,
         ),

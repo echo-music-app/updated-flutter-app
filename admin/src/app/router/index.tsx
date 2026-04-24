@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import { RouteGuard } from "@/core/auth/route-guard";
 import { routes } from "@/core/routing/route-definitions";
+import { SessionShell } from "@/features/auth/presentation/session-shell";
 
 // Auth
 const LoginPage = lazy(() =>
@@ -53,8 +54,10 @@ const RelationshipDetailPage = lazy(() =>
 
 function LoadingFallback() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <span className="text-muted-foreground">Loading...</span>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="admin-panel text-center">
+        <span className="text-sm text-muted-foreground">Loading module...</span>
+      </div>
     </div>
   );
 }
@@ -62,7 +65,9 @@ function LoadingFallback() {
 function Guarded({ children }: { children: React.ReactNode }) {
   return (
     <RouteGuard>
-      <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+      <SessionShell>
+        <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+      </SessionShell>
     </RouteGuard>
   );
 }

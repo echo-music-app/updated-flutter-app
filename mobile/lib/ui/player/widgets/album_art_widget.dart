@@ -20,6 +20,7 @@ class AlbumArtWidget extends StatelessWidget {
         width: 300,
         height: 300,
         fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
         placeholder: (context, url) => const SizedBox(
           width: 300,
           height: 300,

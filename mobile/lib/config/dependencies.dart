@@ -11,6 +11,7 @@ import 'package:mobile/features/music_search/domain/ports/music_search_repositor
 import 'package:mobile/features/profile_view/data/repositories/echo_profile_repository.dart';
 import 'package:mobile/features/profile_view/domain/ports/profile_repository.dart';
 import 'package:mobile/ui/core/themes/theme_mode_controller.dart';
+import 'package:mobile/ui/core/themes/login_style_controller.dart';
 import 'package:mobile/ui/messages/echo_messages_repository.dart';
 import 'package:mobile/ui/messages/message_badge_controller.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +40,9 @@ const _soundCloudRedirectUri = String.fromEnvironment(
 List<SingleChildWidget> get providersLocal => [
   ChangeNotifierProvider<ThemeModeController>(
     create: (_) => ThemeModeController(),
+  ),
+  ChangeNotifierProvider<LoginStyleController>(
+    create: (_) => LoginStyleController(),
   ),
   ChangeNotifierProvider<AuthRepository>(
     create: (_) => EmailAuthRepository(

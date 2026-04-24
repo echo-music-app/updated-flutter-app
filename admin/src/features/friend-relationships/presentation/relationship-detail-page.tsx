@@ -46,15 +46,15 @@ export function RelationshipDetailPage() {
     onError: () => setFeedback("Action failed. Please try again."),
   });
 
-  if (isLoading) return <div className="text-muted-foreground">Loading...</div>;
+  if (isLoading) return <div className="admin-panel text-sm text-muted-foreground">Loading...</div>;
   if (!relationship) return <EmptyState title="Relationship not found" />;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Friend Relationship</h2>
-        <p className="text-sm text-muted-foreground">ID: {relationship.id}</p>
-        <p className="text-sm mt-1">
+    <div className="admin-page">
+      <div className="admin-panel">
+        <h2 className="admin-page-title">Friend Relationship</h2>
+        <p className="mt-1 text-sm text-muted-foreground">ID: {relationship.id}</p>
+        <p className="mt-2 text-sm">
           Status: <span className="font-medium">{relationship.status}</span>
         </p>
         <p className="text-sm">User A: {relationship.user_a_id}</p>
@@ -62,12 +62,12 @@ export function RelationshipDetailPage() {
       </div>
 
       {feedback && (
-        <div role="alert" className="rounded-md bg-primary/10 px-3 py-2 text-sm">
+        <div role="alert" className="admin-panel border-primary/30 bg-primary/10 text-sm">
           {feedback}
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="admin-panel space-y-4">
         <AdminActionForm
           title="Remove Relationship"
           onSubmit={({ reason }) =>

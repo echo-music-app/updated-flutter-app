@@ -30,8 +30,11 @@ export function UsersListPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Users</h2>
+    <div className="admin-page">
+      <div>
+        <h2 className="admin-page-title">Users</h2>
+        <p className="admin-page-subtitle mt-1">Monitor account health and moderation status</p>
+      </div>
       <DataTable
         columns={columns}
         data={data?.items ?? []}
@@ -39,12 +42,12 @@ export function UsersListPage() {
         keyExtractor={(row) => row.id}
         emptyMessage="No users found."
       />
-      <div className="flex gap-2">
+      <div className="admin-panel flex items-center gap-2">
         <button
           type="button"
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page <= 1}
-          className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+          className="rounded-lg border bg-card px-3 py-1.5 text-sm font-medium transition hover:bg-accent disabled:opacity-50"
         >
           Previous
         </button>
@@ -52,7 +55,7 @@ export function UsersListPage() {
           type="button"
           onClick={() => setPage((p) => p + 1)}
           disabled={!data?.items.length || data.items.length < 20}
-          className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+          className="rounded-lg border bg-card px-3 py-1.5 text-sm font-medium transition hover:bg-accent disabled:opacity-50"
         >
           Next
         </button>

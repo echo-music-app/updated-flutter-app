@@ -32,6 +32,7 @@ class SpotifyLoginScreen extends StatelessWidget {
                     Image(
                       image: const AssetImage('assets/images/logo_light.png'),
                       height: 120,
+                      filterQuality: FilterQuality.high,
                     ),
                     SizedBox(height: AppSpacing.lg),
                     Text(

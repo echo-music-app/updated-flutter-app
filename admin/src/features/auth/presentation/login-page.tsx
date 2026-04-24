@@ -42,11 +42,16 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6 p-8 rounded-lg border bg-card shadow-sm">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      <div className="pointer-events-none absolute -left-28 top-8 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-accent blur-3xl" />
+      <div className="relative w-full max-w-md space-y-6 rounded-2xl border bg-card/95 p-8 shadow-lg backdrop-blur-sm">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold">Echo Admin</h1>
-          <p className="text-sm text-muted-foreground">Sign in to your admin workspace</p>
+          <p className="admin-chip mx-auto mb-2 border-primary/30 bg-primary/10 text-primary">
+            Secure Access
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Echo Admin</h1>
+          <p className="text-sm text-muted-foreground">Sign in to your moderation workspace</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,7 +65,7 @@ export function LoginPage() {
               type="email"
               required
               autoComplete="email"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="admin@example.com"
             />
           </div>
@@ -75,14 +80,14 @@ export function LoginPage() {
               type="password"
               required
               autoComplete="current-password"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           {error && (
             <div
               role="alert"
-              className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
             >
               {error}
             </div>
@@ -91,7 +96,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loginMutation.isPending}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
           >
             {loginMutation.isPending ? "Signing in..." : "Sign in"}
           </button>

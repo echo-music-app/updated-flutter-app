@@ -11,6 +11,8 @@ import 'package:mobile/ui/player_webview/widgets/spotify_iframe_widget.dart';
 import 'package:mobile/ui/player_webview/widgets/webview_limitation_banner.dart';
 import 'package:mobile/generated/l10n/app_localizations.dart';
 import 'package:mobile/ui/core/themes/app_spacing.dart';
+import 'package:mobile/ui/core/widgets/app_top_nav_leading.dart';
+import 'package:mobile/ui/core/widgets/trend_surfaces.dart';
 
 class PlayerWebViewScreen extends StatelessWidget {
   const PlayerWebViewScreen({super.key, required this.viewModel});
@@ -21,85 +23,152 @@ class PlayerWebViewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.playerTitle)),
-      body: ListenableBuilder(
-        listenable: viewModel,
-        builder: (context, _) => switch (viewModel.screenState) {
-          WebViewScreenState.loading => _buildLoading(),
-          WebViewScreenState.error => _buildError(context, l10n),
-          WebViewScreenState.data => _buildData(context, l10n),
-        },
+      appBar: AppBar(
+        leading: const AppTopNavLeading(),
+        title: Text(l10n.playerTitle),
+        centerTitle: true,
+      ),
+      body: DecoratedBox(
+        decoration: appTrendBackground(context),
+        child: ListenableBuilder(
+          listenable: viewModel,
+          builder: (context, _) => switch (viewModel.screenState) {
+            WebViewScreenState.loading => _buildLoading(context),
+            WebViewScreenState.error => _buildError(context, l10n),
+            WebViewScreenState.data => _buildData(context, l10n),
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildLoading() {
-    return const Center(child: CircularProgressIndicator());
+  Widget _buildLoading(BuildContext context) {
+    return Center(
+      child: TrendPanel(
+        child: const Padding(
+          padding: EdgeInsets.all(8),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+    );
   }
 
   Widget _buildError(BuildContext context, AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.webViewPlayerLoadError, textAlign: TextAlign.center),
-            SizedBox(height: AppSpacing.md),
-            Semantics(
-              label: l10n.retryButton,
-              child: ElevatedButton(
-                onPressed: viewModel.retry,
-                child: Text(l10n.retryButton),
+        child: TrendPanel(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.webViewPlayerLoadError, textAlign: TextAlign.center),
+              SizedBox(height: AppSpacing.md),
+              Semantics(
+                label: l10n.retryButton,
+                child: ElevatedButton(
+                  onPressed: viewModel.retry,
+                  child: Text(l10n.retryButton),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildData(BuildContext context, AppLocalizations l10n) {
+    final currentTrack = viewModel.currentTrack;
     return SafeArea(
-      child: Column(
-        children: [
-          const WebViewLimitationBanner(),
-          Expanded(
-            child: viewModel.currentTrack == null
-                ? const Center(child: CircularProgressIndicator())
-                : SpotifyIframeWidget(
-                    trackId: viewModel.currentTrack!.id,
-                    onLoaded: viewModel.onIframeLoaded,
-                    onError: viewModel.onIframeError,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+        child: Column(
+          children: [
+            TrendPanel(
+              borderRadius: BorderRadius.circular(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.album_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          currentTrack?.name ?? 'Preparing track...',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ],
                   ),
-          ),
-          _buildQueueControls(l10n),
-        ],
+                  const SizedBox(height: 2),
+                  Text(
+                    currentTrack?.artistName ?? 'Spotify',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const WebViewLimitationBanner(),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: TrendPanel(
+                borderRadius: BorderRadius.circular(20),
+                padding: const EdgeInsets.all(10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: currentTrack == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : SpotifyIframeWidget(
+                          trackId: currentTrack.id,
+                          onLoaded: viewModel.onIframeLoaded,
+                          onError: viewModel.onIframeError,
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _buildQueueControls(context, l10n),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildQueueControls(AppLocalizations l10n) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+  Widget _buildQueueControls(BuildContext context, AppLocalizations l10n) {
+    return TrendPanel(
+      borderRadius: BorderRadius.circular(18),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Semantics(
-            label: l10n.previousTrack,
-            child: IconButton(
-              tooltip: l10n.previousTrack,
-              icon: const Icon(Icons.skip_previous),
-              onPressed: viewModel.hasPrevious ? viewModel.skipPrevious : null,
+          Expanded(
+            child: Semantics(
+              label: l10n.previousTrack,
+              child: FilledButton.tonalIcon(
+                onPressed: viewModel.hasPrevious
+                    ? viewModel.skipPrevious
+                    : null,
+                icon: const Icon(Icons.skip_previous_rounded),
+                label: Text(l10n.previousTrack),
+              ),
             ),
           ),
-          SizedBox(width: AppSpacing.lg),
-          Semantics(
-            label: l10n.nextTrack,
-            child: IconButton(
-              tooltip: l10n.nextTrack,
-              icon: const Icon(Icons.skip_next),
-              onPressed: viewModel.hasNext ? viewModel.skipNext : null,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Semantics(
+              label: l10n.nextTrack,
+              child: FilledButton.tonalIcon(
+                onPressed: viewModel.hasNext ? viewModel.skipNext : null,
+                icon: const Icon(Icons.skip_next_rounded),
+                label: Text(l10n.nextTrack),
+              ),
             ),
           ),
         ],

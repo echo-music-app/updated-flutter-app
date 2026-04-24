@@ -1,4 +1,4 @@
-interface BlockedFeatureProps {
+﻿interface BlockedFeatureProps {
   featureName: string;
   reason?: string;
 }
@@ -11,13 +11,13 @@ export function BlockedFeature({
     <div
       role="alert"
       data-testid="blocked-feature"
-      className="flex flex-col items-center justify-center py-12 text-center"
+      className="admin-panel flex flex-col items-center justify-center py-12 text-center"
     >
-      <div className="rounded-full bg-destructive/10 p-4 mb-4">
-        <span className="text-2xl">🚫</span>
+      <div className="mb-4 rounded-full border border-destructive/30 bg-destructive/10 p-4">
+        <span className="text-xl font-bold text-destructive">!</span>
       </div>
-      <h3 className="text-lg font-medium text-destructive">{featureName} is not available</h3>
-      <p className="mt-2 text-sm text-muted-foreground max-w-sm">{reason}</p>
+      <h3 className="text-lg font-semibold text-destructive">{featureName} is not available</h3>
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">{reason}</p>
     </div>
   );
 }
